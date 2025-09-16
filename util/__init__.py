@@ -1,0 +1,1 @@
+# Pacote util - Funções utilitárias para o projeto

@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="card bg-dark text-white p-4 shadow" style="max-width: 400px; width: 100%;">
+    <div class="card-body">
+      <h2 class="card-title text-center mb-4">Cadastro Profissional</h2>
+      {% if erro %}
+      <div class="alert alert-danger">{{ erro }}</div>
+      {% endif %}
+      <form method="POST" action="/cadastro_profissional">
+        <div class="mb-3">
+          <label for="nome" class="form-label">Nome</label>
+          <input type="text" class="form-control bg-secondary text-white border-0" id="nome" name="nome" required>
+        </div>
+        <div class="mb-3">
+          <label for="email" class="form-label">Email</label>
+          <input type="email" class="form-control bg-secondary text-white border-0" id="email" name="email" required>
+        </div>
+        <div class="mb-3">
+          <label for="senha" class="form-label">Senha</label>
+          <input type="password" class="form-control bg-secondary text-white border-0" id="senha" name="senha" required>
+        </div>
+        <div class="mb-3">
+          <label for="especialidade" class="form-label">Especialidade</label>
+          <input type="text" class="form-control bg-secondary text-white border-0" id="especialidade" name="especialidade" required>
+        </div>
+        <div class="mb-3">
+          <label for="registro_profissional" class="form-label">Registro Profissional (opcional)</label>
+          <input type="text" class="form-control bg-secondary text-white border-0" id="registro_profissional" name="registro_profissional">
+        </div>
+        <button type="submit" class="btn btn-success w-100">Cadastrar</button>
+      </form>
+      <p class="text-center mt-3">
+        Já tem conta? <a href="/login_profissional" class="text-info">Faça login</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

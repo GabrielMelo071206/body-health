@@ -1,0 +1,118 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+
+    <div class="container mt-5">
+        <div id="carouselExampleAutoplaying" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-inner">
+                <div class="carousel-item active">
+                    <img src="/static/img/carrossel1.png" class="d-block w-100" alt="Imagem 1">
+                </div>
+                <div class="carousel-item">
+                    <img src="/static/img/carrossel2.png" class="d-block w-100" alt="Imagem 2">
+                </div>
+                <div class="carousel-item">
+                    <img src="/static/img/carrossel3.png" class="d-block w-100" alt="Imagem 3">
+                </div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleAutoplaying" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon"></span>
+                <span class="visually-hidden">Anterior</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleAutoplaying" data-bs-slide="next">
+                <span class="carousel-control-next-icon"></span>
+                <span class="visually-hidden">Próximo</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="headline">O Corpo dos seus sonhos em <span>suas mãos</span></div>
+
+    <section class="banner">
+        <div class="banner-text">
+            <h4 class="mt-4" style="color: rgb(0, 0, 0);">Body Health: Seu parceiro na jornada fitness!</h4>
+            <ul>
+                <li><i class="bi bi-play-circle-fill"></i> Vídeos demonstrativos para cada exercício</li>
+                <li><i class="bi bi-graph-up"></i> Acompanhe sua evolução e cargas em tempo real</li>
+                <li><i class="bi bi-clipboard-check"></i> Tenha acesso a dezenas de treinos, mesmo sem assinatura</li>
+                <li><i class="bi bi-arrow-repeat"></i> Contrate planos ou faça upgrade com facilidade</li>
+                <li><i class="bi bi-globe"></i> Tudo isso online, no seu tempo – e com opções gratuitas!</li>
+            </ul>
+            <p class="fw-bold mt-3">Tudo isso de graça!</p>
+            <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play" height="40"></a>
+            </div>
+        <div class="banner-image">
+            <img src="/static/img/Capa.png" alt="App Body Health">
+        </div>
+    </section>
+
+    <div class="plans-section">
+        <h2 class="text-center">Escolha o plano ideal para você</h2>
+        <div class="d-flex flex-wrap justify-content-center gap-4 mt-4">
+            <div class="plan-card plan-card-highlight">
+                <div>
+                    <h3>Plano Anual</h3>
+                    <p class="price-info"><s>R$ 239,88</s><br><strong>por R$179,90 / ano</strong></p>
+                </div>
+                <ul>
+                    <li><i class="bi bi-check-circle-fill"></i> Criar Conta</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Calcular IMC</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Planilha de Treino Básica</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Salvar Dados</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Ler Artigos</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Sem Anúncios</li> <li><i class="bi bi-check-circle-fill"></i> Treinos Personalizados Ilimitados</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Acompanhamento Nutricional</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Avaliar Profissionais</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Salvar Medidas e Peso</li>
+                </ul>
+                <a href="/planos" class="d-block mt-3 text-center text-decoration-none">
+                    <button>Assinar Agora</button>
+                </a>
+            </div>
+
+            <div class="plan-card">
+                <div>
+                    <h3>Plano Mensal</h3>
+                    <p class="price-info"><strong>A partir de R$ 19,90/mês</strong></p>
+                </div>
+                <ul>
+                    <li><i class="bi bi-check-circle-fill"></i> Criar Conta</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Calcular IMC</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Planilha de Treino Básica</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Salvar Dados</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Ler Artigos</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Sem Anúncios</li> <li><i class="bi bi-check-circle-fill"></i> Treinos Personalizados Limitados</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Acompanhamento Nutricional Básico</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Avaliar Profissionais</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Salvar Medidas e Peso</li>
+                </ul>
+                <a href="/planos" class="d-block mt-3 text-center text-decoration-none">
+                     <button>Assinar Agora</button>
+                </a>
+            </div>
+
+            <div class="plan-card">
+                <div>
+                    <h3>Plano Gratuito</h3>
+                    <p class="price-info"><strong>R$ 0,00</strong></p>
+                </div>
+                <ul>
+                    <li><i class="bi bi-check-circle-fill"></i> Criar Conta</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Calcular IMC</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Planilha de Treino Básica</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Salvar Dados Limitado</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Ler Artigos Selecionados</li>
+                    <li class=""><i class="bi bi-x-circle-fill"></i> Com Anúncios</li> 
+                    <li class=""><i class="bi bi-x-circle-fill"></i> Treinos Personalizados</li>
+                    <li class=""><i class="bi bi-x-circle-fill"></i> Acompanhamento Nutricional</li>
+                    <li class=""><i class="bi bi-x-circle-fill"></i> Avaliar Profissionais</li>
+                    <li class=""><i class="bi bi-x-circle-fill"></i> Salvar Medidas e Peso</li>
+                </ul>
+                <a href="/planos" class="d-block mt-3 text-center text-decoration-none">
+                    <button>Começar Agora</button>
+                </a>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

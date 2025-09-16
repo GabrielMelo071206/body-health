@@ -1,0 +1,8 @@
+# pip install -r .\requirements.txt
+fastapi[standard]
+uvicorn[standard]
+jinja2
+python-multipart
+passlib[bcrypt]
+python-jose[cryptography]
+itsdangerous
