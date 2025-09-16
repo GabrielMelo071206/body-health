@@ -1,6 +1,6 @@
 from typing import Optional
-from model.plano_model import Plano
-from sql.plano_sql import *
+from data.model.plano_model import Plano
+from data.sql.plano_sql import *
 from util.db_util import get_connection
 
 def criar_tabela() -> bool:

@@ -36,6 +36,15 @@
             <li class="nav-item ms-lg-3"> 
               <a class="btn btn-outline-light {% if request.path.startswith('/login') %}active{% endif %}" href="/login">Login</a>
             </li>
+            <li class="nav-item ms-lg-3">
+              {% if request.session.get('usuario') %}
+                <span class="navbar-text me-3">Olá, {{ request.session.usuario.nome }}!</span>
+                <a class="btn btn-outline-danger" href="/logout">Sair</a>
+              {% else %}
+                <a class="" href="/login"></a>
+              {% endif %}
+            </li>
+
         </ul>
       </div>
     </div>

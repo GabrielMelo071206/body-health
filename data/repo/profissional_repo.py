@@ -1,8 +1,8 @@
 from typing import Optional
-from model.profissional_model import Profissional
-from model.usuario_model import Usuario
-from repo import usuario_repo
-from sql.profissional_sql import *
+from data.model.profissional_model import Profissional
+from data.model.usuario_model import Usuario
+from data.repo import usuario_repo
+from data.sql.profissional_sql import *
 from util.db_util import get_connection
 
 def criar_tabela() -> bool:
@@ -11,16 +11,21 @@ def criar_tabela() -> bool:
         cursor.execute(CRIAR_TABELA_PROFISSIONAL)
         return cursor.rowcount > 0
 
-def inserir(prof: Profissional, usuario: Usuario) -> Optional[int]:
+
+def inserir(prof: Profissional) -> Optional[int]:
     with get_connection() as conn:
         cursor = conn.cursor()
-        id_usuario = usuario_repo.inserir(usuario, cursor)
         cursor.execute(INSERIR_PROFISSIONAL, (
-            id_usuario,
-            prof.especialidade
+            prof.usuario_id,
+            prof.especialidade,
+            prof.registro_profissional,
+            'pendente',   # Valor para 'status'
+            None,         # Valor para 'data_solicitacao' (o SQL pode preencher com DEFAULT)
+            None,         # Valor para 'data_aprovacao'
+            None          # Valor para 'aprovado_por'
         ))
-        return id_usuario
-
+        conn.commit()
+        return cursor.lastrowid
 def alterar(prof: Profissional, usuario: Usuario) -> bool:
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -67,3 +72,40 @@ def obter_todos() -> list[Profissional]:
                 senha=row["senha"]
             ) for row in rows
         ]
+
+def obter_pendentes() -> list:
+    """Obter profissionais pendentes de aprovação"""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(OBTER_PENDENTES)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+def obter_todos_com_status() -> list:
+    """Obter todos profissionais com status"""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(OBTER_TODOS_COM_STATUS)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+def aprovar(profissional_id: int, admin_id: int = None) -> bool:
+    """Aprovar profissional"""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(APROVAR_PROFISSIONAL, (admin_id, profissional_id))
+        return cursor.rowcount > 0
+
+def rejeitar(profissional_id: int, admin_id: int = None) -> bool:
+    """Rejeitar profissional"""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(REJEITAR_PROFISSIONAL, (admin_id, profissional_id))
+        return cursor.rowcount > 0
+
+def desativar(profissional_id: int) -> bool:
+    """Desativar profissional"""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE profissional SET status = 'inativo' WHERE id = ?", (profissional_id,))
+        return cursor.rowcount > 0

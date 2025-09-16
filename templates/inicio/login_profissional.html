@@ -1,10 +1,13 @@
-{% extends "base.html" %}
+{% extends "layout.html" %}  <!-- CORRIGIDO: era "base.html" -->
 
 {% block content %}
 <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
     <div class="card bg-dark text-white p-4 shadow" style="max-width: 400px; width: 100%;">
         <div class="card-body">
             <h2 class="card-title text-center mb-4">Login Profissional</h2>
+            {% if erro %}
+            <div class="alert alert-danger">{{ erro }}</div>
+            {% endif %}
             <form method="POST" action="/login_profissional">
                 <div class="mb-3">
                     <label for="email" class="form-label">Email</label>
@@ -17,7 +20,7 @@
                 <button type="submit" class="btn btn-secondary w-100">Entrar</button>
             </form>
             <p class="text-center mt-3">
-                Não tem conta? <a href="/cadastro" class="text-info">Cadastre-se</a>
+                Não tem conta? <a href="/cadastro_profissional" class="text-info">Cadastre-se</a>
             </p>
         </div>
     </div>
