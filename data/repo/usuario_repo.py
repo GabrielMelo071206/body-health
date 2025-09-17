@@ -145,11 +145,9 @@ from email.mime.multipart import MIMEMultipart
 
 
 def enviar_email_redefinicao(destinatario: str, token: str):
-    remetente = "seuemail@gmail.com"
+    remetente = "gabrag0987a@gmail.com"
     senha_app = "SUA_SENHA_DE_APP"  # senha de app do Gmail
-
     link = f"http://localhost:8000/resetar_senha?token={token}"
-
     msg = MIMEMultipart()
     msg['From'] = remetente
     msg['To'] = destinatario

@@ -111,22 +111,41 @@ def obter_todos_com_status() -> list[dict]:
         cursor.execute(OBTER_TODOS_COM_STATUS)
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
-
-# Aprovar profissional
+    
 def aprovar(profissional_id: int, admin_id: Optional[int] = None) -> bool:
+    if not profissional_id:
+        return False
+
     with get_connection() as conn:
         cursor = conn.cursor()
+
+        # Confirma que o profissional existe e está pendente
+        cursor.execute("SELECT id, status FROM profissional WHERE id = ?", (profissional_id,))
+        row = cursor.fetchone()
+        if not row or row["status"] != "pendente":
+            return False
+
         cursor.execute(APROVAR_PROFISSIONAL, (admin_id, profissional_id))
         conn.commit()
+        print(f"[ADMIN] Usuario {admin_id} aprovou profissional {profissional_id}")
         return cursor.rowcount > 0
 
-# Rejeitar profissional
 def rejeitar(profissional_id: int, admin_id: Optional[int] = None) -> bool:
+    if not profissional_id:
+        return False
+
     with get_connection() as conn:
         cursor = conn.cursor()
+        cursor.execute("SELECT id, status FROM profissional WHERE id = ?", (profissional_id,))
+        row = cursor.fetchone()
+        if not row or row["status"] != "pendente":
+            return False
+
         cursor.execute(REJEITAR_PROFISSIONAL, (admin_id, profissional_id))
         conn.commit()
+        print(f"[ADMIN] Usuario {admin_id} rejeitou profissional {profissional_id}")
         return cursor.rowcount > 0
+
 
 # Desativar profissional (status inativo)
 def desativar(profissional_id: int) -> bool:

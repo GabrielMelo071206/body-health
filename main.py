@@ -1,5 +1,5 @@
 import datetime
-from fastapi import FastAPI, Request, Form, Depends
+from fastapi import FastAPI, HTTPException, Request, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -26,13 +26,12 @@ SECRET_KEY = secrets.token_urlsafe(32)
 app.add_middleware( 
     SessionMiddleware, 
     secret_key=SECRET_KEY, 
-    max_age=3600, 
+    max_age=19, 
     same_site="lax", 
     https_only=False
 )
 
 # =================== PÁGINAS INICIAIS ===================
-
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse("inicio/index.html", {"request": request})
@@ -350,35 +349,35 @@ async def admin_profissionais_listar(request: Request, usuario_logado: dict = De
         "usuario": usuario_logado,
         "profissionais": profissionais
     })
+from fastapi import status
 
+# Página de profissionais pendentes
 @app.get("/admin/profissionais/pendentes")
 @requer_autenticacao(['admin'])
-async def admin_profissionais_pendentes(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
-    """Listar profissionais pendentes de aprovação"""
-    profissionais_pendentes = profissional_repo.obter_pendentes()
-    return templates.TemplateResponse("admin/profissionais/perndentes.html", {
-        "request": request,
-        "usuario": usuario_logado,
-        "profissionais": profissionais_pendentes
-    })
-@app.post("/admin/profissionais/aprovar/{profissional_id}")
-@requer_autenticacao(['admin'])
-async def admin_profissionais_aprovar(
-    request: Request,
-    profissional_id: int,
-    usuario_logado: dict = Depends(obter_usuario_logado)
-):
-    """Aprovar profissional"""
-    admin_id = usuario_logado["id"]
-    profissional_repo.aprovar(profissional_id, admin_id=admin_id)
-    return RedirectResponse("/admin/profissionais/pendentes", status_code=303)
+def ver_profissionais_pendentes(request: Request):
+    profissionais = profissional_repo.obter_pendentes()
+    return templates.TemplateResponse(
+        "admin/profissionais/perndentes.html",
+        {"request": request, "profissionais": profissionais}
+    )
 
-@app.post("/admin/profissionais/rejeitar/{profissional_id}")
+# Aprovar profissional
+@app.post("/admin/profissionais/aprovar/{prof_id}")
 @requer_autenticacao(['admin'])
-async def admin_profissionais_rejeitar(request: Request, profissional_id: int, usuario_logado: dict = Depends(obter_usuario_logado)):
-    """Rejeitar profissional"""
-    profissional_repo.rejeitar(profissional_id)
-    return RedirectResponse("/admin/profissionais/pendentes", status_code=303)
+def aprovar_profissional(prof_id: int, admin_id: int = 1):  # admin_id pode vir do login
+    sucesso = profissional_repo.aprovar(prof_id, admin_id)
+    if not sucesso:
+        print(f"Erro ao aprovar profissional {prof_id}")
+    return RedirectResponse(url="/admin/profissionais/pendentes", status_code=status.HTTP_303_SEE_OTHER)
+
+# Rejeitar profissional
+@app.post("/admin/profissionais/rejeitar/{prof_id}")
+@requer_autenticacao(['admin'])
+def rejeitar_profissional(prof_id: int, admin_id: int = 1):
+    sucesso = profissional_repo.rejeitar(prof_id, admin_id)
+    if not sucesso:
+        print(f"Erro ao rejeitar profissional {prof_id}")
+    return RedirectResponse(url="/admin/profissionais/pendentes", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/admin/profissionais/desativar/{profissional_id}")
 @requer_autenticacao(['admin'])
