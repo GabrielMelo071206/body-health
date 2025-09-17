@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card bg-dark text-white p-4 shadow" style="max-width: 400px; width: 100%;">
+        <div class="card-body">
+            <h2 class="card-title text-center mb-4">Recuperar Senha</h2>
+
+            {% if mensagem %}
+            <div class="alert alert-success">{{ mensagem }}</div>
+            {% endif %}
+
+            {% if erro %}
+            <div class="alert alert-danger">{{ erro }}</div>
+            {% endif %}
+
+            <form method="POST" action="/recuperar_senha">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email cadastrado</label>
+                    <input type="email" class="form-control bg-secondary text-white border-0" id="email" name="email" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Enviar Link de Recuperação</button>
+            </form>
+
+            <p class="text-center mt-3">
+                Lembrou a senha? <a href="/login_cliente" class="text-info">Faça login</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

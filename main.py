@@ -1,5 +1,6 @@
+import datetime
 from fastapi import FastAPI, Request, Form, Depends
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -164,13 +165,17 @@ async def cadastro_profissional_post(
     especialidade: str = Form(...),
     registro_profissional: Optional[str] = Form(None)
 ):
+    # Verifica se o email já está cadastrado
     if usuario_repo.obter_por_email(email):
         return templates.TemplateResponse(
             "inicio/cadastro_profissional.html", 
             {"request": request, "erro": "Email já cadastrado"}
         )
 
+    # Cria hash da senha
     hash_senha = criar_hash_senha(senha)
+
+    # Cria usuário com perfil de profissional
     usuario = Usuario(
         id=0, 
         nome=nome, 
@@ -179,16 +184,23 @@ async def cadastro_profissional_post(
         perfil="profissional"
     )
     
+    # Insere usuário no banco e obtém ID
     usuario_id = usuario_repo.inserir(usuario)
     
-    # Criar registro na tabela profissional
+    # Cria registro do profissional com status pendente
+    from datetime import datetime
+
     profissional = Profissional(
-        usuario_id=usuario_id, 
+        id=usuario_id,
         especialidade=especialidade,
-        registro_profissional=registro_profissional
+        registro_profissional=registro_profissional,
+        data_solicitacao=datetime.now(),  # <--- funciona agora
+        status="pendente"
     )
+
     profissional_repo.inserir(profissional)
 
+    # Redireciona para página de login do profissional
     return RedirectResponse("/login_profissional", status_code=303)
 
 from util.auth_decorator import requer_autenticacao
@@ -205,8 +217,32 @@ async def perfil(request: Request, usuario_logado: dict = Depends(obter_usuario_
 
 @app.get("/admin")
 @requer_autenticacao(['admin'])
-async def admin_dashboard(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
-    return templates.TemplateResponse("admin/dashboard.html", {"request": request, "usuario": usuario_logado})
+async def admin_dashboard(request: Request, usuario_logado: dict = None):
+    """Dashboard principal do admin"""
+    
+    # Estatísticas gerais
+    total_usuarios = len(usuario_repo.obter_todos())
+    total_clientes = len(cliente_repo.obter_todos())
+    total_profissionais = len(profissional_repo.obter_todos())
+    total_planos = len(plano_repo.obter_todos())
+    
+    # Profissionais pendentes de aprovação (você precisa adicionar campo 'ativo' na tabela)
+    profissionais_pendentes = profissional_repo.obter_pendentes()
+    
+    estatisticas = {
+        "total_usuarios": total_usuarios,
+        "total_clientes": total_clientes,
+        "total_profissionais": total_profissionais,
+        "total_planos": total_planos,
+        "profissionais_pendentes": len(profissionais_pendentes)
+    }
+    
+    return templates.TemplateResponse("admin/dashboard.html", {
+        "request": request,
+        "usuario": usuario_logado,
+        "estatisticas": estatisticas,
+        "profissionais_pendentes": profissionais_pendentes[:5]  # Últimos 5
+    })
 
 # =================== GESTÃO DE PLANOS ===================
 
@@ -320,17 +356,21 @@ async def admin_profissionais_listar(request: Request, usuario_logado: dict = De
 async def admin_profissionais_pendentes(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
     """Listar profissionais pendentes de aprovação"""
     profissionais_pendentes = profissional_repo.obter_pendentes()
-    return templates.TemplateResponse("admin/profissionais/pendentes.html", {
+    return templates.TemplateResponse("admin/profissionais/perndentes.html", {
         "request": request,
         "usuario": usuario_logado,
         "profissionais": profissionais_pendentes
     })
-
 @app.post("/admin/profissionais/aprovar/{profissional_id}")
 @requer_autenticacao(['admin'])
-async def admin_profissionais_aprovar(request: Request, profissional_id: int, usuario_logado: dict = Depends(obter_usuario_logado)):
+async def admin_profissionais_aprovar(
+    request: Request,
+    profissional_id: int,
+    usuario_logado: dict = Depends(obter_usuario_logado)
+):
     """Aprovar profissional"""
-    profissional_repo.aprovar(profissional_id)
+    admin_id = usuario_logado["id"]
+    profissional_repo.aprovar(profissional_id, admin_id=admin_id)
     return RedirectResponse("/admin/profissionais/pendentes", status_code=303)
 
 @app.post("/admin/profissionais/rejeitar/{profissional_id}")
@@ -403,6 +443,38 @@ async def login_admin_post(request: Request, email: str = Form(...), senha: str 
     # Redireciona para o painel do admin
     return RedirectResponse("/admin", status_code=303)
 
+
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+@app.get("/recuperar_senha", response_class=HTMLResponse)
+async def recuperar_senha_get(request: Request):
+    return templates.TemplateResponse("/inicio/recuperar_senha.html", {"request": request})
+
+@app.post("/recuperar_senha", response_class=HTMLResponse)
+async def recuperar_senha_post(request: Request, email: str = Form(...)):
+    usuario = usuario_repo.obter_por_email(email)
+    if not usuario:
+        return templates.TemplateResponse(
+            "inicio/recuperar_senha.html",
+            {"request": request, "erro": "Email não cadastrado."}
+        )
+
+    # Gerar token aleatório
+    token = secrets.token_urlsafe(32)
+    
+    # Salvar token no banco
+    usuario_repo.atualizar_token(usuario.id, token)
+
+    # Enviar email
+    usuario_repo.enviar_email_redefinicao(usuario.email, token)
+
+    return templates.TemplateResponse(
+        "inicio/recuperar_senha.html",
+        {"request": request, "sucesso": "Um email com o link de redefinição foi enviado!"}
+    )
 
 if __name__ == "__main__":
     import uvicorn
