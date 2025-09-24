@@ -12,12 +12,15 @@ from starlette.middleware.sessions import SessionMiddleware
 
 # Seus imports
 from data.repo import plano_repo, usuario_repo, cliente_repo, profissional_repo
-from util.security import criar_hash_senha, verificar_senha
+from util.security import criar_hash_senha, verificar_senha, gerar_senha_aleatoria
 from util.auth_decorator import criar_sessao, obter_usuario_logado, requer_autenticacao
 from data.model.usuario_model import Usuario
 from data.model.cliente_model import Cliente
 from data.model.profissional_model import Profissional
 from data.model.plano_model import Plano
+
+# ========== IMPORTAÇÃO DO NOVO EMAIL SERVICE ==========
+from util.email_service import email_service
 
 app = FastAPI()
 
@@ -62,11 +65,20 @@ async def index(request: Request):
 async def sobre(request: Request):
     return templates.TemplateResponse("inicio/sobre.html", {"request": request})
 
-# main.py - ADICIONAR ROTA
-from util.email_service import EmailService
+@app.get("/suporte")
+async def suporte_get(request: Request):
+    """Página de suporte - GET"""
+    # Capturar mensagens da URL (success/error redirects)
+    sucesso = request.query_params.get('sucesso')
+    erro = request.query_params.get('erro')
+    
+    return templates.TemplateResponse("inicio/suporte.html", {
+        "request": request,
+        "sucesso": sucesso,
+        "erro": erro
+    })
 
-email_service = EmailService()
-
+# ========== ROTA DE SUPORTE ATUALIZADA ==========
 @app.post("/suporte")
 async def enviar_suporte_post(
     request: Request,
@@ -75,27 +87,49 @@ async def enviar_suporte_post(
     assunto: str = Form(...),
     mensagem: str = Form(...)
 ):
-    # Validações
+    """Processa formulário de suporte com novo email service"""
+    
+    # Validações básicas
     if not all([nome.strip(), email.strip(), assunto.strip(), mensagem.strip()]):
-        return templates.TemplateResponse("inicio/suporte.html", {
-            "request": request,
-            "erro": "Todos os campos são obrigatórios."
-        })
+        return RedirectResponse(
+            url="/suporte?erro=Todos os campos são obrigatórios.",
+            status_code=303
+        )
     
-    # Enviar email
-    sucesso = email_service.enviar_mensagem_suporte(nome, email, assunto, mensagem)
+    # Validação de tamanho da mensagem
+    if len(mensagem.strip()) < 10:
+        return RedirectResponse(
+            url="/suporte?erro=A mensagem deve ter pelo menos 10 caracteres.",
+            status_code=303
+        )
     
-    if sucesso:
-        return templates.TemplateResponse("inicio/suporte.html", {
-            "request": request,
-            "sucesso": "Mensagem enviada com sucesso! Responderemos em breve."
-        })
-    else:
-        return templates.TemplateResponse("inicio/suporte.html", {
-            "request": request,
-            "erro": "Erro no envio. Tente novamente."
-        })
-    
+    # Enviar email usando o novo serviço
+    try:
+        sucesso, resultado = email_service.enviar_mensagem_suporte(
+            nome=nome.strip(),
+            email_usuario=email.strip(),
+            assunto=assunto.strip(),
+            mensagem=mensagem.strip()
+        )
+        
+        if sucesso:
+            return RedirectResponse(
+                url="/suporte?sucesso=" + resultado,
+                status_code=303
+            )
+        else:
+            return RedirectResponse(
+                url="/suporte?erro=" + resultado,
+                status_code=303
+            )
+            
+    except Exception as e:
+        print(f"[ERRO SUPORTE] {e}")
+        return RedirectResponse(
+            url="/suporte?erro=Erro interno do sistema. Tente novamente.",
+            status_code=303
+        )
+
 @app.get("/planos")
 async def planos(request: Request):
     try:
@@ -140,13 +174,10 @@ async def planos(request: Request):
             "tem_planos_gratuitos": False,
             "erro": "Erro ao carregar planos. Tente novamente mais tarde."
         })
+
 @app.get("/pagamento")
 async def pagamento(request: Request):
     return templates.TemplateResponse("inicio/pagamento.html", {"request": request})
-
-@app.get("/suporte")
-async def suporte(request: Request):
-    return templates.TemplateResponse("inicio/suporte.html", {"request": request})
 
 # =================== AUTENTICAÇÃO ===================
 @app.get("/login")
@@ -247,7 +278,7 @@ async def cadastro_cliente_post(
 async def cadastro_profissional_get(request: Request):
     return templates.TemplateResponse("inicio/cadastro_profissional.html", {"request": request})
 
-# main.py - MODIFICAR CADASTRO PROFISSIONAL
+# CADASTRO PROFISSIONAL COM UPLOAD
 from fastapi import UploadFile, File
 from util.file_upload import salvar_foto_registro, validar_cpf_cnpj
 
@@ -348,6 +379,53 @@ async def admin_dashboard(request: Request, usuario_logado: dict = Depends(obter
         "estatisticas": estatisticas,
         "profissionais_pendentes": profissionais_pendentes[:5]
     })
+
+# ========== ROTA ADMIN PARA TESTAR EMAIL ==========
+@app.get("/admin/test-email")
+@requer_autenticacao(['admin'])
+async def test_email_admin(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
+    """Rota admin para testar configuração de email"""
+    
+    try:
+        # Testar conexão
+        if email_service.testar_conexao():
+            resultado = {
+                "status": "✅ Sucesso",
+                "mensagem": "Conexão SMTP estabelecida com sucesso!",
+                "servidor": email_service.smtp_server,
+                "porta": email_service.smtp_port,
+                "email": email_service.email
+            }
+        else:
+            resultado = {
+                "status": "❌ Erro", 
+                "mensagem": "Falha na conexão SMTP",
+                "servidor": email_service.smtp_server,
+                "porta": email_service.smtp_port,
+                "email": email_service.email
+            }
+        
+        # Retornar template HTML em vez de JSON
+        return templates.TemplateResponse("admin/test_email.html", {
+            "request": request,
+            "usuario": usuario_logado,
+            "resultado": resultado
+        })
+        
+    except Exception as e:
+        resultado = {
+            "status": "❌ Erro Crítico",
+            "mensagem": f"Erro inesperado: {str(e)}",
+            "servidor": "N/A",
+            "porta": "N/A",
+            "email": "N/A"
+        }
+        
+        return templates.TemplateResponse("admin/test_email.html", {
+            "request": request,
+            "usuario": usuario_logado,
+            "resultado": resultado
+        })
 
 # =================== GESTÃO DE PLANOS ===================
 @app.get("/admin/planos")
@@ -519,29 +597,82 @@ async def login_admin_post(request: Request, email: str = Form(...), senha: str 
     criar_sessao(request, usuario_dict)
     return RedirectResponse("/admin", status_code=303)
 
-# =================== RECUPERAÇÃO DE SENHA ===================
+# ========== RECUPERAÇÃO DE SENHA ATUALIZADA ==========
 @app.get("/recuperar_senha", response_class=HTMLResponse)
 async def recuperar_senha_get(request: Request):
-    return templates.TemplateResponse("/inicio/recuperar_senha.html", {"request": request})
+    """Página de recuperação de senha - GET"""
+    # Capturar mensagens da URL (success/error redirects)
+    mensagem = request.query_params.get('mensagem')
+    erro = request.query_params.get('erro')
+    
+    return templates.TemplateResponse("inicio/recuperar_senha.html", {
+        "request": request,
+        "mensagem": mensagem,
+        "erro": erro
+    })
 
 @app.post("/recuperar_senha", response_class=HTMLResponse)
 async def recuperar_senha_post(request: Request, email: str = Form(...)):
-    usuario = usuario_repo.obter_por_email(email)
+    """Processa recuperação de senha com novo email service"""
+    
+    # Buscar usuário pelo email
+    usuario = usuario_repo.obter_por_email(email.strip().lower())
+    
     if not usuario:
-        return templates.TemplateResponse(
-            "inicio/recuperar_senha.html",
-            {"request": request, "erro": "Email não cadastrado."}
+        return RedirectResponse(
+            url="/recuperar_senha?erro=Email não encontrado no sistema.",
+            status_code=303
         )
 
-    token = secrets.token_urlsafe(32)
-    usuario_repo.atualizar_token(usuario.id, token)
-    usuario_repo.enviar_email_redefinicao(usuario.email, token)
+    try:
+        # Gerar nova senha temporária
+        nova_senha = gerar_senha_aleatoria(8)
+        
+        # Atualizar no banco de dados
+        usuario.senha = criar_hash_senha(nova_senha)
+        usuario_repo.alterar(usuario)
+        
+        # Enviar por email usando o novo serviço
+        sucesso, mensagem = email_service.enviar_recuperacao_senha(
+            email_usuario=usuario.email,
+            nome=usuario.nome,
+            nova_senha=nova_senha
+        )
+        
+        if sucesso:
+            return RedirectResponse(
+                url="/recuperar_senha?mensagem=Nova senha enviada para seu email! Verifique sua caixa de entrada.",
+                status_code=303
+            )
+        else:
+            return RedirectResponse(
+                url="/recuperar_senha?erro=Erro ao enviar email. Tente novamente mais tarde.",
+                status_code=303
+            )
+            
+    except Exception as e:
+        print(f"[ERRO RECUPERAÇÃO] {e}")
+        return RedirectResponse(
+            url="/recuperar_senha?erro=Erro interno do sistema. Tente novamente.",
+            status_code=303
+        )
 
-    return templates.TemplateResponse(
-        "inicio/recuperar_senha.html",
-        {"request": request, "sucesso": "Um email com o link de redefinição foi enviado!"}
-    )
+# ========== ROTA DE TESTE RÁPIDO (DESENVOLVIMENTO) ==========
+@app.get("/test-email-quick")
+async def test_email_quick():
+    """Teste rápido do email service - apenas para desenvolvimento"""
+    try:
+        # Teste de conexão
+        if email_service.testar_conexao():
+            return {"status": "✅ Conexão OK", "service": "Body Health Email"}
+        else:
+            return {"status": "❌ Conexão FALHOU", "service": "Body Health Email"}
+    except Exception as e:
+        return {"status": f"❌ ERRO: {str(e)}", "service": "Body Health Email"}
 
 if __name__ == "__main__":
     import uvicorn
+    print("🚀 Iniciando Body Health com Email Service integrado...")
+    print("📧 Email configurado: bodyhealth619@gmail.com")
+    print("🔧 Teste o email em: http://localhost:8000/test-email-quick")
     uvicorn.run(app, host="0.0.0.0", port=8000)

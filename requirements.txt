@@ -6,3 +6,21 @@ python-multipart
 passlib[bcrypt]
 python-jose[cryptography]
 itsdangerous
+
+# Email (já incluídos no Python)
+# smtplib - incluído
+# email.mime - incluído
+
+# Variáveis de ambiente
+python-dotenv==1.0.0
+
+# Upload de arquivos
+aiofiles==23.2.0
+pillow==10.1.0  # Para processamento de imagens
+
+# Validações
+email-validator==2.1.0
+
+# Desenvolvimento e debug
+python-multipart==0.0.6
+
