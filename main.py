@@ -98,20 +98,48 @@ async def enviar_suporte_post(
     
 @app.get("/planos")
 async def planos(request: Request):
-    todos_planos = plano_repo.obter_todos()
-    
-    planos_gratuitos = [p for p in todos_planos if p.preco == 0.0]
-    planos_pagos = [p for p in todos_planos if p.preco > 0.0]
-    
-    # Organizar planos pagos por popularidade/preço
-    planos_pagos.sort(key=lambda x: x.preco)
-    
-    return templates.TemplateResponse("inicio/planos.html", {
-        "request": request,
-        "todos_planos": todos_planos,
-        "planos_gratuitos": planos_gratuitos,
-        "planos_pagos": planos_pagos
-    })
+    try:
+        # Buscar todos os planos ativos
+        todos_planos = plano_repo.obter_todos()
+        
+        # Separar planos por tipo (gratuitos vs pagos)
+        planos_gratuitos = [p for p in todos_planos if p.preco == 0.0]
+        planos_pagos = [p for p in todos_planos if p.preco > 0.0]
+        
+        # Ordenar planos pagos por preço (do menor para o maior)
+        planos_pagos.sort(key=lambda x: x.preco)
+        
+        # Ordenar planos gratuitos por duração
+        planos_gratuitos.sort(key=lambda x: x.duracao_dias, reverse=True)
+        
+        # Estatísticas para debug (opcional - remover em produção)
+        print(f"[DEBUG] Total de planos: {len(todos_planos)}")
+        print(f"[DEBUG] Planos gratuitos: {len(planos_gratuitos)}")
+        print(f"[DEBUG] Planos pagos: {len(planos_pagos)}")
+        
+        return templates.TemplateResponse("inicio/planos.html", {
+            "request": request,
+            "todos_planos": todos_planos,
+            "planos_gratuitos": planos_gratuitos,
+            "planos_pagos": planos_pagos,
+            # Dados adicionais que podem ser úteis
+            "total_planos": len(todos_planos),
+            "tem_planos_pagos": len(planos_pagos) > 0,
+            "tem_planos_gratuitos": len(planos_gratuitos) > 0
+        })
+    except Exception as e:
+        print(f"[ERRO] Erro ao carregar planos: {str(e)}")
+        # Em caso de erro, retornar template com listas vazias
+        return templates.TemplateResponse("inicio/planos.html", {
+            "request": request,
+            "todos_planos": [],
+            "planos_gratuitos": [],
+            "planos_pagos": [],
+            "total_planos": 0,
+            "tem_planos_pagos": False,
+            "tem_planos_gratuitos": False,
+            "erro": "Erro ao carregar planos. Tente novamente mais tarde."
+        })
 @app.get("/pagamento")
 async def pagamento(request: Request):
     return templates.TemplateResponse("inicio/pagamento.html", {"request": request})

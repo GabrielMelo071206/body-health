@@ -55,7 +55,8 @@ def obter_por_id(id: int) -> Optional[Plano]:
             )
         return None
     
-def obter_por_tipo(self, tipo: str) -> list[Plano]:
+
+def obter_por_tipo(tipo: str) -> list[Plano]:
     """Obter planos gratuitos ou pagos"""
     with get_connection() as conn:
         cursor = conn.cursor()

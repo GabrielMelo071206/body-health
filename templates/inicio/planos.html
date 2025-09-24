@@ -1,24 +1,24 @@
 {% extends 'layout.html' %}
 
 {% block content %}
-
     <div class="container mt-5">
         <h1 class="text-center mb-5 fw-bold text-primary">Escolha o plano ideal para você</h1>
 
         <div class="plan-tabs" role="tablist">
             <input type="radio" name="plan-tab-control" id="premium-tab" checked class="plan-tab-control">
-            <label for="premium-tab" class="plan-tab-label" onclick="showTab('premium-content-section')">Plano Premium</label>
+            <label for="premium-tab" class="plan-tab-label" onclick="showTab('premium-content-section')">Planos Pagos</label>
 
             <input type="radio" name="plan-tab-control" id="free-tab" class="plan-tab-control">
-            <label for="free-tab" class="plan-tab-label" onclick="showTab('free-content-section')">Plano Gratuito</label>
+            <label for="free-tab" class="plan-tab-label" onclick="showTab('free-content-section')">Planos Gratuitos</label>
         </div>
 
         <div class="tab-content-wrapper">
 
+            <!-- Seção de Planos Pagos -->
             <div id="premium-content-section" class="tab-content-section row">
                 <div class="col-md-7">
                     <div class="plan-details-card">
-                        <h3 class="fw-bold">Leve sua saúde ao próximo nível com o Plano Premium!</h3>
+                        <h3 class="fw-bold">Leve sua saúde ao próximo nível com nossos Planos Premium!</h3>
                         <p>Desbloqueie todo o potencial da Body Health com acesso ilimitado a recursos exclusivos e personalizados, criados para otimizar seus resultados e te manter motivado.</p>
                         <div class="row features mt-4">
                             <div class="col-12 col-md-6"><i class="bi bi-check-circle-fill"></i> Treinos personalizados e ilimitados</div>
@@ -35,37 +35,44 @@
 
                 <div class="col-md-5">
                     <div class="sidebar">
-                        <h5>Assine o Plano Premium e transforme sua saúde!</h5>
-                        <div class="form-check mt-4">
-                            <input class="form-check-input" type="radio" name="assinatura" id="plano1" value="19.90" checked>
-                            <label class="form-check-label" for="plano1">
-                                <strong>Assinatura Mensal</strong><br>
-                                Pague mês a mês. Cancele quando quiser.<br>
-                                <strong class="text-success">R$19,90 / mês</strong>
-                            </label>
-                        </div>
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" type="radio" name="assinatura" id="plano2" value="179.90">
-                            <label class="form-check-label" for="plano2">
-                                <strong>Assinatura Anual</strong><br>
-                                Pague um ano e economize! (Economia de 25%)<br>
-                                <strong class="text-success">R$179,90 / ano</strong> <span class="badge bg-success">Melhor Custo-Benefício!</span>
-                            </label>
-                        </div>
-                        <!-- <div class="price-display">R$19,90</div> -->
-                        <a href= "/pagamento"><button class="btn btn-primary btn-lg w-100 mt-3">Assinar Agora</button></a>
+                        <h5>Escolha seu Plano Premium!</h5>
+                        
+                        {% if planos_pagos %}
+                            {% for plano in planos_pagos %}
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="radio" name="assinatura" id="plano_{{ plano.id }}" value="{{ plano.preco }}" {% if loop.first %}checked{% endif %}>
+                                <label class="form-check-label" for="plano_{{ plano.id }}">
+                                    <strong>{{ plano.nome }}</strong><br>
+                                    {{ plano.descricao }}<br>
+                                    <strong class="text-success">R$ {{ "%.2f"|format(plano.preco) }}{% if plano.duracao_dias == 30 %} / mês{% elif plano.duracao_dias >= 365 %} / ano{% else %} / {{ plano.duracao_dias }} dias{% endif %}</strong>
+                                    {% if plano.duracao_dias >= 365 %}
+                                        <span class="badge bg-success">Melhor Custo-Benefício!</span>
+                                    {% endif %}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-info">
+                                <p>No momento não temos planos pagos disponíveis. Em breve teremos novidades!</p>
+                            </div>
+                        {% endif %}
+                        
+                        {% if planos_pagos %}
+                        <a href="/pagamento"><button class="btn btn-primary btn-lg w-100 mt-3">Assinar Agora</button></a>
                         <p class="mt-3 text-muted text-center" style="font-size: 0.85rem;">
                             Consulte os termos de uso para saber detalhes sobre alterações de preços e sobre como cancelar.
                         </p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
 
+            <!-- Seção de Planos Gratuitos -->
             <div id="free-content-section" class="tab-content-section row">
                 <div class="col-md-7">
                     <div class="plan-details-card">
-                        <h3 class="fw-bold">Comece sua jornada fitness com o Plano Gratuito!</h3>
-                        <p>Ideal para quem está começando, a versão gratuita da Body Health oferece funcionalidades essenciais para você dar os primeiros passos em direção a uma vida mais saudável.</p>
+                        <h3 class="fw-bold">Comece sua jornada fitness com nossos Planos Gratuitos!</h3>
+                        <p>Ideal para quem está começando, nossos planos gratuitos oferecem funcionalidades essenciais para você dar os primeiros passos em direção a uma vida mais saudável.</p>
                         <div class="row features mt-4">
                             <div class="col-12 col-md-6"><i class="bi bi-check-circle-fill"></i> Criar e gerenciar sua conta</div>
                             <div class="col-12 col-md-6"><i class="bi bi-check-circle-fill"></i> Calcular IMC e outras métricas básicas</div>
@@ -78,10 +85,36 @@
                 </div>
                 <div class="col-md-5">
                     <div class="sidebar">
-                        <h5>Aproveite o Plano Gratuito!</h5>
-                        <p class="text-center mt-4">Com o plano gratuito, você tem acesso às funcionalidades essenciais para começar sua jornada fitness.</p>
-                        <!-- <div class="">Grátis</div> -->
-                        <a href="/login"><button class="btn btn-primary btn-lg w-100 mt-3">Assinar Agora</button></a>
+                        <h5>Planos Gratuitos Disponíveis!</h5>
+                        
+                        {% if planos_gratuitos %}
+                            {% for plano in planos_gratuitos %}
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ plano.nome }}</h6>
+                                    <p class="card-text">{{ plano.descricao }}</p>
+                                    <div class="text-center">
+                                        <strong class="text-success fs-4">Gratuito</strong>
+                                        {% if plano.duracao_dias > 0 %}
+                                            <small class="text-muted d-block">Por {{ plano.duracao_dias }} dias</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">Plano Básico Gratuito</h6>
+                                    <p class="card-text">Acesso às funcionalidades essenciais para começar sua jornada fitness.</p>
+                                    <div class="text-center">
+                                        <strong class="text-success fs-4">Gratuito</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <a href="/login"><button class="btn btn-primary btn-lg w-100 mt-3">Começar Gratuitamente</button></a>
                         <p class="mt-3 text-muted text-center" style="font-size: 0.85rem;">
                             Sem custos, sem compromisso. Explore e descubra o que a Body Health pode fazer por você.
                         </p>

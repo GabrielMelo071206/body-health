@@ -10,7 +10,7 @@ class EmailService:
         # Usar variáveis de ambiente para segurança
         self.smtp_server = "smtp.gmail.com"
         self.smtp_port = 587
-        self.email = os.getenv("BODY_HEALTH_EMAIL", "suporte.bodyhealth@gmail.com")
+        self.email = os.getenv("BODY_HEALTH_EMAIL", "bodyhealth619@gmail.com")
         self.password = os.getenv("BODY_HEALTH_PASSWORD", "sua_senha_app")
     
     def enviar_mensagem_suporte(self, nome: str, email_usuario: str, 
