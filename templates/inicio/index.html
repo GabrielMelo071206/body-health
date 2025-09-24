@@ -46,13 +46,29 @@
         </div>
     </section>
 
+<!-- templates/inicio/index.html - SEÇÃO DE PLANOS ATUALIZADA -->
     <div class="plans-section">
         <h2 class="text-center">Escolha o plano ideal para você</h2>
         <div class="d-flex flex-wrap justify-content-center gap-4 mt-4">
-            <div class="plan-card plan-card-highlight">
+            
+            {% for plano in planos %}
+            <div class="plan-card {% if plano == plano_destaque %}plan-card-highlight{% endif %}">
                 <div>
-                    <h3>Plano Anual</h3>
-                    <p class="price-info"><s>R$ 239,88</s><br><strong>por R$179,90 / ano</strong></p>
+                    <h3>{{ plano.nome }}</h3>
+                    <p class="price-info">
+                        {% if plano.preco == 0 %}
+                            <strong>Gratuito</strong>
+                        {% else %}
+                            {% if plano.duracao_dias >= 365 %}
+                                <s>R$ {{ "%.2f"|format(plano.preco * 12) }}</s><br>
+                            {% endif %}
+                            <strong>R$ {{ "%.2f"|format(plano.preco) }} / 
+                            {% if plano.duracao_dias >= 365 %}ano{% else %}mês{% endif %}</strong>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="plan-description">
+                    <p>{{ plano.descricao }}</p>
                 </div>
                 <ul>
                     <li><i class="bi bi-check-circle-fill"></i> Criar Conta</li>
@@ -60,59 +76,29 @@
                     <li><i class="bi bi-check-circle-fill"></i> Planilha de Treino Básica</li>
                     <li><i class="bi bi-check-circle-fill"></i> Salvar Dados</li>
                     <li><i class="bi bi-check-circle-fill"></i> Ler Artigos</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Sem Anúncios</li> <li><i class="bi bi-check-circle-fill"></i> Treinos Personalizados Ilimitados</li>
+                    
+                    {% if plano.preco > 0 %}
+                    <li><i class="bi bi-check-circle-fill"></i> Sem Anúncios</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Treinos Personalizados</li>
                     <li><i class="bi bi-check-circle-fill"></i> Acompanhamento Nutricional</li>
                     <li><i class="bi bi-check-circle-fill"></i> Avaliar Profissionais</li>
                     <li><i class="bi bi-check-circle-fill"></i> Salvar Medidas e Peso</li>
+                    {% else %}
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i> Com Anúncios</li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i> Treinos Personalizados</li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i> Acompanhamento Nutricional</li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i> Avaliar Profissionais</li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i> Salvar Medidas e Peso</li>
+                    {% endif %}
                 </ul>
-                <a href="/planos" class="d-block mt-3 text-center text-decoration-none">
-                    <button>Assinar Agora</button>
+                <a href="{% if plano.preco == 0 %}/login{% else %}/pagamento?plano={{ plano.id }}{% endif %}" class="d-block mt-3 text-center text-decoration-none">
+                    <button>
+                        {% if plano.preco == 0 %}Começar Grátis{% else %}Assinar Agora{% endif %}
+                    </button>
                 </a>
             </div>
-
-            <div class="plan-card">
-                <div>
-                    <h3>Plano Mensal</h3>
-                    <p class="price-info"><strong>A partir de R$ 19,90/mês</strong></p>
-                </div>
-                <ul>
-                    <li><i class="bi bi-check-circle-fill"></i> Criar Conta</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Calcular IMC</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Planilha de Treino Básica</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Salvar Dados</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Ler Artigos</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Sem Anúncios</li> <li><i class="bi bi-check-circle-fill"></i> Treinos Personalizados Limitados</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Acompanhamento Nutricional Básico</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Avaliar Profissionais</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Salvar Medidas e Peso</li>
-                </ul>
-                <a href="/planos" class="d-block mt-3 text-center text-decoration-none">
-                     <button>Assinar Agora</button>
-                </a>
-            </div>
-
-            <div class="plan-card">
-                <div>
-                    <h3>Plano Gratuito</h3>
-                    <p class="price-info"><strong>R$ 0,00</strong></p>
-                </div>
-                <ul>
-                    <li><i class="bi bi-check-circle-fill"></i> Criar Conta</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Calcular IMC</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Planilha de Treino Básica</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Salvar Dados Limitado</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Ler Artigos Selecionados</li>
-                    <li class=""><i class="bi bi-x-circle-fill"></i> Com Anúncios</li> 
-                    <li class=""><i class="bi bi-x-circle-fill"></i> Treinos Personalizados</li>
-                    <li class=""><i class="bi bi-x-circle-fill"></i> Acompanhamento Nutricional</li>
-                    <li class=""><i class="bi bi-x-circle-fill"></i> Avaliar Profissionais</li>
-                    <li class=""><i class="bi bi-x-circle-fill"></i> Salvar Medidas e Peso</li>
-                </ul>
-                <a href="/planos" class="d-block mt-3 text-center text-decoration-none">
-                    <button>Começar Agora</button>
-                </a>
-            </div>
+            {% endfor %}
+            
         </div>
     </div>
-
 {% endblock %}

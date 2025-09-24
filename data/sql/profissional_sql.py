@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS profissional (
     data_solicitacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_aprovacao TIMESTAMP,
     aprovado_por INTEGER,
+    cpf_cnpj TEXT,
+    foto_registro TEXT,
     FOREIGN KEY (id) REFERENCES usuario(id),
     FOREIGN KEY (aprovado_por) REFERENCES usuario(id)
 );
@@ -14,9 +16,10 @@ CREATE TABLE IF NOT EXISTS profissional (
 
 INSERIR_PROFISSIONAL = """
 INSERT INTO profissional (
-    id, especialidade, registro_profissional, status, data_solicitacao, data_aprovacao, aprovado_por
+    id, especialidade, registro_profissional, status, 
+    data_solicitacao, data_aprovacao, aprovado_por, cpf_cnpj, foto_registro
 )
-VALUES (?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 """
 
 ALTERAR_PROFISSIONAL = """

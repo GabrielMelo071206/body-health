@@ -14,17 +14,22 @@ def inserir(plano: Plano) -> Optional[int]:
         cursor = conn.cursor()
         cursor.execute(INSERIR_PLANO, (
             plano.nome,
-            plano.preco
+            plano.descricao,  
+            plano.preco,
+            plano.duracao_dias  
         ))
+        conn.commit()
         return cursor.lastrowid
-
+    
 def alterar(plano: Plano) -> bool:
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(ALTERAR_PLANO, (
             plano.nome,
             plano.preco,
-            plano.id
+            plano.id,
+            plano.duracao_dias,
+            plano.descricao
         ))
         return cursor.rowcount > 0
 
@@ -43,9 +48,33 @@ def obter_por_id(id: int) -> Optional[Plano]:
             return Plano(
                 id=row["id"],
                 nome=row["nome"],
-                preco=row["preco"]
+                descricao=row["descricao"],
+                preco=row["preco"],
+                duracao_dias=row["duracao_dias"],
+                ativo=row["ativo"]
             )
         return None
+    
+def obter_por_tipo(self, tipo: str) -> list[Plano]:
+    """Obter planos gratuitos ou pagos"""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        if tipo == "gratuito":
+            cursor.execute("SELECT * FROM plano WHERE preco = 0 AND ativo = 1 ORDER BY id")
+        else:  # "pago"
+            cursor.execute("SELECT * FROM plano WHERE preco > 0 AND ativo = 1 ORDER BY preco")
+        
+        rows = cursor.fetchall()
+        return [
+            Plano(
+                id=row["id"],
+                nome=row["nome"],
+                descricao=row["descricao"],
+                preco=row["preco"],
+                duracao_dias=row["duracao_dias"],
+                ativo=row["ativo"]
+            ) for row in rows
+        ]
 
 def obter_todos() -> list[Plano]:
     with get_connection() as conn:
@@ -56,6 +85,9 @@ def obter_todos() -> list[Plano]:
             Plano(
                 id=row["id"],
                 nome=row["nome"],
-                preco=row["preco"]
+                descricao=row["descricao"],  
+                preco=row["preco"],
+                duracao_dias=row["duracao_dias"],  
+                ativo=row["ativo"]  
             ) for row in rows
         ]

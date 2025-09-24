@@ -26,14 +26,15 @@ DELETE FROM plano
 WHERE id=?
 """
 
-OBTER_POR_ID_PLANO = """
-SELECT id, nome, preco
+OBTER_TODOS_PLANO = """
+SELECT id, nome, descricao, preco, duracao_dias, ativo, data_criacao
 FROM plano
-WHERE id=?
+WHERE ativo = 1
+ORDER BY preco
 """
 
-OBTER_TODOS_PLANO = """
-SELECT id, nome, preco
+OBTER_POR_ID_PLANO = """
+SELECT id, nome, descricao, preco, duracao_dias, ativo, data_criacao
 FROM plano
-ORDER BY nome
+WHERE id=? AND ativo = 1
 """

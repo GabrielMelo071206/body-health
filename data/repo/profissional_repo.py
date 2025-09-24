@@ -16,17 +16,20 @@ def criar_tabela() -> bool:
         return True
 
 # Inserir um novo profissional
+# data/repo/profissional_repo.py - MODIFICAR INSERIR
 def inserir(prof: Profissional) -> Optional[int]:
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(INSERIR_PROFISSIONAL, (
-            prof.id,                      # id do usuário já criado
+            prof.id,
             prof.especialidade,
             prof.registro_profissional,
             prof.status or 'pendente',
             prof.data_solicitacao or None,
             prof.data_aprovacao or None,
-            prof.aprovado_por
+            prof.aprovado_por,
+            prof.cpf_cnpj,  # NOVO
+            prof.foto_registro  # NOVO
         ))
         conn.commit()
         return cursor.lastrowid

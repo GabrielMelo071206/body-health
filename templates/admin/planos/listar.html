@@ -4,110 +4,112 @@
 {% block subtitulo %}Gerenciar planos de assinatura{% endblock %}
 
 {% block content %}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h5 class="mb-0">Lista de Planos</h5>
-        <a href="/admin/planos/novo" class="btn btn-primary">
-            <i class="bi bi-plus me-1"></i> Novo Plano
-        </a>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="mb-0">Lista de Planos</h5>
+    <a href="/admin/planos/novo" class="btn btn-primary">
+        <i class="bi bi-plus me-1"></i> Novo Plano
+    </a>
+</div>
 
-    <div class="card">
-        <div class="card-body">
-            {% if planos %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Nome</th>
-                                <th>Descrição</th>
-                                <th>Preço</th>
-                                <th>Duração</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for plano in planos %}
-                            <tr>
-                                <td>{{ plano.id }}</td>
-                                <td><strong>{{ plano.nome }}</strong></td>
-                                <td>{{ plano.descricao[:50] }}{% if plano.descricao|length > 50 %}...{% endif %}</td>
-                                <td>
-                                    {% if plano.preco == 0 %}
-                                        <span class="badge bg-success">Gratuito</span>
-                                    {% else %}
-                                        <strong>R$ {{ "%.2f"|format(plano.preco) }}</strong>
-                                    {% endif %}
-                                </td>
-                                <td>{{ plano.duracao_dias }} dias</td>
-                                <td>
-                                    {% if plano.ativo %}
-                                        <span class="badge bg-success">Ativo</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Inativo</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="/admin/planos/editar/{{ plano.id }}" class="btn btn-outline-primary">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-outline-danger" 
-                                                onclick="confirmarExclusao({{ plano.id }}, '{{ plano.nome }}')">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div class="text-center py-5">
-                    <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
-                    <h5 class="mt-3 text-muted">Nenhum plano encontrado</h5>
-                    <p class="text-muted">Crie o primeiro plano para começar.</p>
-                    <a href="/admin/planos/novo" class="btn btn-primary">
-                        <i class="bi bi-plus me-1"></i> Criar Primeiro Plano
-                    </a>
-                </div>
-            {% endif %}
-        </div>
+<div class="card">
+    <div class="card-body">
+        {% if planos %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                            <th>Preço</th>
+                            <th>Duração</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plano in planos %}
+                        <tr>
+                            <td>{{ plano.id }}</td>
+                            <td><strong>{{ plano.nome }}</strong></td>
+                            <td>{{ plano.descricao[:50] }}{% if plano.descricao|length > 50 %}...{% endif %}</td>
+                            <td>
+                                {% if plano.preco == 0 %}
+                                    <span class="badge bg-success">Gratuito</span>
+                                {% else %}
+                                    <strong>R$ {{ "%.2f"|format(plano.preco) }}</strong>
+                                {% endif %}
+                            </td>
+                            <td>{{ plano.duracao_dias }} dias</td>
+                            <td>
+                                {% if plano.ativo %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/admin/planos/editar/{{ plano.id }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" 
+                                        onclick="confirmarExclusao({{ plano.id }}, '{{ plano.nome }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                <h5 class="mt-3 text-muted">Nenhum plano encontrado</h5>
+                <p class="text-muted">Crie o primeiro plano para começar.</p>
+                <a href="/admin/planos/novo" class="btn btn-primary">
+                    <i class="bi bi-plus me-1"></i> Criar Primeiro Plano
+                </a>
+            </div>
+        {% endif %}
     </div>
+</div>
 
-    <!-- Modal de Confirmação de Exclusão -->
-    <div class="modal fade" id="modalExclusao" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Confirmar Exclusão</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Tem certeza que deseja excluir o plano <strong id="nomePlano"></strong>?</p>
-                    <p class="text-danger"><small>Esta ação não pode ser desfeita!</small></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <form method="post" id="formExclusao" class="d-inline">
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-trash me-1"></i> Excluir
-                        </button>
-                    </form>
-                </div>
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="modalExclusao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir o plano <strong id="nomePlano"></strong>?</p>
+                <p class="text-danger"><small>Esta ação não pode ser desfeita!</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="post" id="formExclusao" class="d-inline">
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
+                </form>
             </div>
         </div>
     </div>
-{% endblock %}
+</div>
 
-{% block scripts %}
 <script>
 function confirmarExclusao(id, nome) {
+    // Atualiza o texto do modal
     document.getElementById('nomePlano').textContent = nome;
+    // Atualiza o action do form
     document.getElementById('formExclusao').action = '/admin/planos/excluir/' + id;
-    new bootstrap.Modal(document.getElementById('modalExclusao')).show();
+    // Mostra o modal
+    var modal = new bootstrap.Modal(document.getElementById('modalExclusao'));
+    modal.show();
 }
 </script>
 {% endblock %}

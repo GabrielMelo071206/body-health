@@ -1,1 +1,127 @@
-<h1>.</h1>
+<!-- templates/admin/profissionais/pendentes.html - CORRIGIR ARQUIVO -->
+{% extends "admin/base_admin.html" %}
+
+{% block titulo %}Profissionais Pendentes{% endblock %}
+{% block subtitulo %}Aprovar ou rejeitar cadastros{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">
+                    <i class="bi bi-clock me-2"></i>Profissionais Aguardando Aprovação
+                </h5>
+                <small class="text-muted">Total: {{ profissionais|length }} pendente(s)</small>
+            </div>
+            <a href="/admin/profissionais" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Voltar para Lista
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if profissionais %}
+<div class="row">
+    {% for prof in profissionais %}
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                    <i class="bi bi-person-badge me-2"></i>{{ prof.nome }}
+                    <span class="badge bg-secondary float-end">{{ prof.especialidade }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <p class="mb-1"><strong>Email:</strong> {{ prof.email }}</p>
+                        <p class="mb-1"><strong>Especialidade:</strong> {{ prof.especialidade }}</p>
+                        {% if prof.registro_profissional %}
+                        <p class="mb-1"><strong>Registro:</strong> {{ prof.registro_profissional }}</p>
+                        {% endif %}
+                        {% if prof.cpf_cnpj %}
+                        <p class="mb-1"><strong>CPF/CNPJ:</strong> {{ prof.cpf_cnpj }}</p>
+                        {% endif %}
+                        <p class="mb-1">
+                            <strong>Solicitação:</strong> 
+                            {{ prof.data_solicitacao[:10] if prof.data_solicitacao else 'N/A' }}
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        {% if prof.foto_registro %}
+                        <img src="{{ prof.foto_registro }}" alt="Registro" 
+                             class="img-fluid rounded" style="max-height: 100px; cursor: pointer;"
+                             onclick="verImagem('{{ prof.foto_registro }}', '{{ prof.nome }}')">
+                        <small class="d-block text-center text-muted">Clique para ampliar</small>
+                        {% else %}
+                        <div class="text-center text-muted">
+                            <i class="bi bi-image" style="font-size: 2rem;"></i>
+                            <small class="d-block">Sem imagem</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <form method="post" action="/admin/profissionais/aprovar/{{ prof.id }}" class="d-inline">
+                        <button type="submit" class="btn btn-success" 
+                                onclick="return confirm('Aprovar profissional {{ prof.nome }}?')">
+                            <i class="bi bi-check-lg me-1"></i> Aprovar
+                        </button>
+                    </form>
+                    
+                    <form method="post" action="/admin/profissionais/rejeitar/{{ prof.id }}" class="d-inline">
+                        <button type="submit" class="btn btn-danger"
+                                onclick="return confirm('Rejeitar profissional {{ prof.nome }}?')">
+                            <i class="bi bi-x-lg me-1"></i> Rejeitar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal para visualizar imagem -->
+<div class="modal fade" id="modalImagem" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloImagem">Documento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img src="" id="imagemCompleta" class="img-fluid" alt="Documento">
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+                <h5 class="mt-3">Nenhum profissional pendente!</h5>
+                <p class="text-muted">Todos os cadastros foram processados.</p>
+                <a href="/admin/profissionais" class="btn btn-primary">
+                    Ver Todos os Profissionais
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function verImagem(src, nome) {
+    document.getElementById('imagemCompleta').src = src;
+    document.getElementById('tituloImagem').textContent = 'Documento de ' + nome;
+    new bootstrap.Modal(document.getElementById('modalImagem')).show();
+}
+</script>
+{% endblock %}
