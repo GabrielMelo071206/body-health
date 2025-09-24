@@ -1,2 +1,2 @@
 # Loja Virtual Python com FastAPI
-
+mlsn.db4526ae6121f8b073ce1e4114eec60fdfb114fe5943921ce62290543f6a4666
