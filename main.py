@@ -425,6 +425,27 @@ async def admin_planos_editar_post(
     plano_repo.alterar(plano)
     return RedirectResponse("/admin/planos", status_code=303)
 
+
+@app.get("/admin/usuarios{id}")
+async def listar_usuarios(request: Request):
+    usuarios = usuario_repo.obter_por_id # Buscar do banco
+    return templates.TemplateResponse("admin/usuarios.html", {"request": request, "usuarios": usuarios})
+
+# Página de confirmação
+@app.get("/admin/usuarios/excluir/{id}")
+async def confirmar_exclusao_usuario(request: Request, id: int):
+    usuario = ...  # Buscar usuário pelo ID
+    return templates.TemplateResponse("confirmar_exclusao_usuario.html", {"request": request, "usuario": usuario})
+
+# Exclusão real
+@app.post("/admin/usuarios/excluir/{id}")
+async def excluir_usuario(id: int):
+    ...  # Lógica para excluir usuário
+    return RedirectResponse(url="/admin/usuarios", status_code=303)
+
+
+
+
 @app.post("/admin/planos/excluir/{plano_id}")
 @requer_autenticacao(['admin'])
 async def admin_planos_excluir(request: Request, plano_id: int, usuario_logado: dict = Depends(obter_usuario_logado)):

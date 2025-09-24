@@ -1,105 +1,103 @@
 {% extends "admin/base_admin.html" %}
 
 {% block titulo %}Gestão de Usuários{% endblock %}
-{% block subtitulo %}Visualizar todos os usuários do sistema{% endblock %}
+{% block subtitulo %}Gerenciar usuários da plataforma{% endblock %}
 
 {% block content %}
-    <div class="mb-4">
-        <h5 class="mb-0">Lista de Usuários</h5>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="mb-0">Lista de Usuários</h5>
+    <a href="/admin/usuarios/novo" class="btn btn-primary">
+        <i class="bi bi-plus me-1"></i> Novo Usuário
+    </a>
+</div>
 
-    <div class="card">
-        <div class="card-body">
-            {% if usuarios %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Nome</th>
-                                <th>Email</th>
-                                <th>Perfil</th>
-                                <th>Data Cadastro</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for user in usuarios %}
-                            <tr>
-                                <td>{{ user.id }}</td>
-                                <td><strong>{{ user.nome }}</strong></td>
-                                <td>{{ user.email }}</td>
-                                <td>
-                                    {% if user.perfil == 'admin' %}
-                                        <span class="badge bg-danger">Administrador</span>
-                                    {% elif user.perfil == 'profissional' %}
-                                        <span class="badge bg-warning">Profissional</span>
-                                    {% else %}
-                                        <span class="badge bg-success">Cliente</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if user.data_cadastro %}
-                                        {{ user.data_cadastro[:10] }}
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if user.perfil != 'admin' %}
-                                        <button type="button" class="btn btn-outline-danger btn-sm" 
-                                                onclick="confirmarExclusaoUsuario({{ user.id }}, '{{ user.nome }}')">
-                                            <i class="bi bi-trash"></i> Excluir
-                                        </button>
-                                    {% else %}
-                                        <span class="text-muted">Admin protegido</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div class="text-center py-5">
-                    <i class="bi bi-people text-muted" style="font-size: 4rem;"></i>
-                    <h5 class="mt-3 text-muted">Nenhum usuário encontrado</h5>
-                </div>
-            {% endif %}
+<div class="card">
+    <div class="card-body">
+        {% if usuarios %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    <tr>
+                        <td>{{ usuario.id }}</td>
+                        <td><strong>{{ usuario.nome }}</strong></td>
+                        <td>{{ usuario.email }}</td>
+                        <td>
+                            {% if usuario.ativo %}
+                                <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/admin/usuarios/editar/{{ usuario.id }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" 
+                                    onclick="confirmarExclusao({{ usuario.id }}, '{{ usuario.nome }}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+            <h5 class="mt-3 text-muted">Nenhum usuário encontrado</h5>
+            <p class="text-muted">Crie o primeiro usuário para começar.</p>
+            <a href="/admin/usuarios/novo" class="btn btn-primary">
+                <i class="bi bi-plus me-1"></i> Criar Primeiro Usuário
+            </a>
+        </div>
+        {% endif %}
     </div>
+</div>
 
-    <!-- Modal de Confirmação de Exclusão de Usuário -->
-    <div class="modal fade" id="modalExclusaoUsuario" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Confirmar Exclusão de Usuário</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Tem certeza que deseja excluir o usuário <strong id="nomeUsuario"></strong>?</p>
-                    <p class="text-danger"><small>Esta ação irá excluir TODOS os dados relacionados a este usuário e não pode ser desfeita!</small></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <form method="post" id="formExclusaoUsuario" class="d-inline">
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-trash me-1"></i> Excluir Usuário
-                        </button>
-                    </form>
-                </div>
+<!-- Toast de exclusão de usuário -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1055">
+    <div id="toastExclusao" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                Tem certeza que deseja excluir o usuário <strong id="nomeUsuarioToast"></strong>? Esta ação não pode ser desfeita!
             </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+        </div>
+        <div class="mt-2 p-2">
+            <form method="post" id="formExclusaoToast" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-trash"></i> Excluir
+                </button>
+            </form>
         </div>
     </div>
-{% endblock %}
+</div>
 
-{% block scripts %}
 <script>
-function confirmarExclusaoUsuario(id, nome) {
-    document.getElementById('nomeUsuario').textContent = nome;
-    document.getElementById('formExclusaoUsuario').action = '/admin/usuarios/excluir/' + id;
-    new bootstrap.Modal(document.getElementById('modalExclusaoUsuario')).show();
-}
+document.addEventListener('DOMContentLoaded', function () {
+    window.confirmarExclusao = function(id, nome) {
+        // Atualiza o nome do usuário no toast
+        document.getElementById('nomeUsuarioToast').textContent = nome;
+        // Atualiza o action do form
+        document.getElementById('formExclusaoToast').action = '/admin/usuarios/excluir/' + id;
+        // Mostra o toast
+        var toastEl = document.getElementById('toastExclusao');
+        var toast = new bootstrap.Toast(toastEl, { autohide: false });
+        toast.show();
+    }
+});
 </script>
 {% endblock %}
