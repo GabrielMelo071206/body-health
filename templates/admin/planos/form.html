@@ -11,7 +11,7 @@
                     <h5 class="mb-0">{{ titulo }}</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ acao }}">
+                    <form method="POST" action="{{ url_for('admin_planos_editar_post', plano_id=plano.id) }}">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="nome" class="form-label text-dark">Nome do Plano *</label>

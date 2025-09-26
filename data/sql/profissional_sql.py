@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS profissional (
     data_aprovacao TIMESTAMP,
     aprovado_por INTEGER,
     cpf_cnpj TEXT,
-    foto_registro TEXT,
+    foto_registro TEXT NOT NULL,
     FOREIGN KEY (id) REFERENCES usuario(id),
     FOREIGN KEY (aprovado_por) REFERENCES usuario(id)
 );
@@ -46,9 +46,12 @@ SELECT
     p.data_solicitacao,
     p.data_aprovacao,
     p.aprovado_por,
+    p.cpf_cnpj,
+    p.foto_registro,
     u.nome, 
     u.email, 
     u.senha
+
 FROM profissional p
 INNER JOIN usuario u ON p.id = u.id
 WHERE p.id = ?;
@@ -63,6 +66,8 @@ SELECT
     p.data_solicitacao,
     p.data_aprovacao,
     p.aprovado_por,
+    p.cpf_cnpj,
+    p.foto_registro,
     u.nome, 
     u.email, 
     u.senha
@@ -78,6 +83,8 @@ SELECT
     p.registro_profissional, 
     p.status, 
     p.data_solicitacao,
+    p.cpf_cnpj,
+    p.foto_registro,
     u.nome, 
     u.email
 FROM profissional p
@@ -94,6 +101,9 @@ SELECT
     p.status, 
     p.data_solicitacao, 
     p.data_aprovacao,
+    p.aprovado_por,
+    p.cpf_cnpj,
+    p.foto_registro,
     u.nome, 
     u.email,
     admin.nome AS aprovado_por_nome

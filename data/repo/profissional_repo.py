@@ -48,6 +48,8 @@ def alterar(prof: Profissional, usuario: Usuario) -> bool:
             prof.data_solicitacao,
             prof.data_aprovacao,
             prof.aprovado_por,
+            prof.cpf_cnpj,
+            prof.foto_registro,
             prof.id
         ))
         conn.commit()
@@ -76,7 +78,9 @@ def obter_por_id(id: int) -> Optional[Profissional]:
                 status=row["status"],
                 data_solicitacao=row["data_solicitacao"],
                 data_aprovacao=row["data_aprovacao"],
-                aprovado_por=row["aprovado_por"] if "aprovado_por" in row.keys() else None
+                aprovado_por=row["aprovado_por"] if "aprovado_por" in row.keys() else None,
+                cpf_cnpj=row["cpf_cnpj"] if "cpf_cnpj" in row.keys() else None,
+                foto_registro=row["foto_registro"] if "foto_registro" in row.keys() else None
             )
         return None
 
@@ -94,7 +98,9 @@ def obter_todos() -> List[Profissional]:
                 status=row["status"],
                 data_solicitacao=row["data_solicitacao"],
                 data_aprovacao=row["data_aprovacao"],
-                aprovado_por=row["aprovado_por"]
+                aprovado_por=row["aprovado_por"] if "aprovado_por" in row.keys() else None,
+                cpf_cnpj=row["cpf_cnpj"] if "cpf_cnpj" in row.keys() else None,
+                foto_registro=row["foto_registro"] if "foto_registro" in row.keys() else None
             )
             for row in rows
         ]

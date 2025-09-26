@@ -269,7 +269,7 @@ async def cadastro_cliente_post(
 
     usuario_id = usuario_repo.inserir(usuario)
 
-    cliente = Cliente(usuario_id=usuario_id, plano_id=None)
+    cliente = Cliente(usuario_id=usuario_id, id=None)
     cliente_repo.inserir(cliente)
 
     return RedirectResponse("/login_cliente", status_code=303)
@@ -482,49 +482,73 @@ async def admin_planos_editar_get(request: Request, plano_id: int, usuario_logad
         "acao": f"/admin/planos/editar/{plano_id}"
     })
 
+
+
 @app.post("/admin/planos/editar/{plano_id}")
-@requer_autenticacao(['admin'])
 async def admin_planos_editar_post(
     request: Request,
     plano_id: int,
     nome: str = Form(...),
-    descricao: str = Form(...),
     preco: float = Form(...),
-    duracao_dias: int = Form(...),
-    usuario_logado: dict = Depends(obter_usuario_logado)
+    descricao: str = Form(...),
+    duracao_dias: int = Form(...)
 ):
-    plano = Plano(
-        id=plano_id,
-        nome=nome,
-        descricao=descricao,
-        preco=preco,
-        duracao_dias=duracao_dias
-    )
-    plano_repo.alterar(plano)
-    return RedirectResponse("/admin/planos", status_code=303)
+    plano = plano_repo.obter_por_id(plano_id)
+    if not plano:
+        return RedirectResponse("/admin/planos?erro=Plano não encontrado", status_code=303)
+
+    plano.nome = nome
+    plano.descricao = descricao
+    plano.preco = preco
+    plano.duracao_dias = duracao_dias
+
+    success = plano_repo.alterar(plano)
+
+    if success:
+        return RedirectResponse("/admin/planos?sucesso=Plano atualizado com sucesso", status_code=303)
+    else:
+        return RedirectResponse("/admin/planos?erro=Erro ao atualizar plano", status_code=303)
+
 
 
 
 # Página de confirmação
-@app.get("/admin/usuarios/excluir/{id}")
-async def confirmar_exclusao_usuario(request: Request, id: int):
+@app.get("/admin/usuarios/excluir/{usuario_id}")
+async def confirmar_exclusao_usuario(request: Request, usuario_id: int):
     usuario = ...  # Buscar usuário pelo ID
     return templates.TemplateResponse("confirmar_exclusao_usuario.html", {"request": request, "usuario": usuario})
-
 # Exclusão real
-@app.post("/admin/usuarios/excluir/{id}")
-async def excluir_usuario(id: int):
-    ...  # Lógica para excluir usuário
-    return RedirectResponse(url="/admin/usuarios", status_code=303)
-
-
-
-
-@app.post("/admin/planos/excluir/{plano_id}")
+@app.post("/admin/usuarios/excluir/{usuario_id}")
 @requer_autenticacao(['admin'])
-async def admin_planos_excluir(request: Request, plano_id: int, usuario_logado: dict = Depends(obter_usuario_logado)):
-    plano_repo.excluir(plano_id)
-    return RedirectResponse("/admin/planos", status_code=303)
+async def admin_usuarios_excluir(request: Request, usuario_id: int, usuario_logado: dict = Depends(obter_usuario_logado)):
+    # Não permitir que admin exclua a si mesmo
+    if usuario_id == usuario_logado['id']:
+        return RedirectResponse("/admin/usuarios?erro=Não é possível excluir seu próprio usuário", status_code=303)
+    
+    try:
+        # Verificar se usuário existe
+        usuario = usuario_repo.obter_por_id(usuario_id)
+        if not usuario:
+            return RedirectResponse("/admin/usuarios?erro=Usuário não encontrado", status_code=303)
+        
+        # Tentar excluir registros relacionados, mas continuar mesmo se falhar
+        try:
+            if usuario.perfil == "cliente":
+                cliente_repo.excluir(usuario_id)
+            elif usuario.perfil == "profissional":
+                profissional_repo.excluir(usuario_id)
+        except Exception as e:
+            print(f"[AVISO] Não foi possível excluir registros relacionados do usuário {usuario_id}: {str(e)}")
+        
+        # Excluir usuário (sempre tenta)
+        usuario_repo.excluir(usuario_id)
+        
+        return RedirectResponse("/admin/usuarios?sucesso=Usuário excluído com sucesso", status_code=303)
+            
+    except Exception as e:
+        print(f"[ERRO] Erro ao excluir usuário {usuario_id}: {str(e)}")
+        return RedirectResponse("/admin/usuarios?erro=Erro interno ao excluir usuário", status_code=303)
+
 
 # =================== GESTÃO DE PROFISSIONAIS ===================
 @app.get("/admin/profissionais")
@@ -588,6 +612,23 @@ async def admin_usuarios_excluir(request: Request, usuario_id: int, usuario_loga
         return RedirectResponse("/admin/usuarios", status_code=303)
     usuario_repo.excluir(usuario_id)
     return RedirectResponse("/admin/usuarios", status_code=303)
+# ====================================================
+
+@app.post("/admin/planos/excluir/{plano_id}")
+@requer_autenticacao(['admin'])
+async def admin_planos_excluir(request: Request, plano_id: int, usuario_logado: dict = Depends(obter_usuario_logado)):
+    try:
+        plano = plano_repo.obter_por_id(plano_id)
+        if not plano:
+            return RedirectResponse("/admin/planos?erro=Plano não encontrado", status_code=303)
+
+        plano_repo.excluir(plano_id)
+        return RedirectResponse("/admin/planos?sucesso=Plano excluído com sucesso", status_code=303)
+
+    except Exception as e:
+        print(f"[ERRO] Erro ao excluir plano {plano_id}: {str(e)}")
+        return RedirectResponse("/admin/planos?erro=Erro interno ao excluir plano", status_code=303)
+
 
 # =================== AUTENTICAÇÃO ADMIN ===================
 @app.get("/login_admin")
@@ -744,7 +785,7 @@ async def admin_usuarios_novo_post(
     
     # Se for cliente, criar registro na tabela cliente
     if perfil == "cliente":
-        cliente = Cliente(usuario_id=usuario_id, plano_id=None)
+        cliente = Cliente(usuario_id=usuario_id, id=None)
         cliente_repo.inserir(cliente)
     
     return RedirectResponse("/admin/usuarios", status_code=303)

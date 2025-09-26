@@ -1,36 +1,47 @@
-{% extends "admin/base_admin.html" %}
+{% extends "/personal/layout_prof.html" %}
 
-{% block titulo %}Gestão de Usuários{% endblock %}
-{% block subtitulo %}Gerenciar usuários da plataforma{% endblock %}
+{% block titulo %}Treinos{% endblock %}
+{% block subtitulo %}Gerenciar Treinos{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h5 class="mb-0">Lista de Usuários</h5>
-
+    <h5 class="mb-0">Lista de Treinos</h5>
+    <a href="/admin/treinos/novo" class="btn btn-primary">
+        <i class="bi bi-plus me-1"></i> Novo Treino
+    </a>
 </div>
 
 <div class="card">
     <div class="card-body">
-        {% if usuarios %}
+        {% if treinos %}
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead class="table-dark">
                     <tr>
                         <th>ID</th>
                         <th>Nome</th>
-                        <th>Email</th>
+                        <th>Descrição</th>
+                        <th>Duração</th>
                         <th>Status</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for usuario in usuarios %}
+                    {% for plano in planos %}
                     <tr>
-                        <td>{{ usuario.id }}</td>
-                        <td><strong>{{ usuario.nome }}</strong></td>
-                        <td>{{ usuario.email }}</td>
+                        <td>{{ plano.id }}</td>
+                        <td><strong>{{ plano.nome }}</strong></td>
+                        <td>{{ plano.descricao[:50] }}{% if plano.descricao|length > 50 %}...{% endif %}</td>
                         <td>
-                            {% if usuario.ativo %}
+                            {% if plano.preco == 0 %}
+                                <span class="badge bg-success">Gratuito</span>
+                            {% else %}
+                                <strong>R$ {{ "%.2f"|format(plano.preco) }}</strong>
+                            {% endif %}
+                        </td>
+                        <td>{{ plano.duracao_dias }} dias</td>
+                        <td>
+                            {% if plano.ativo %}
                                 <span class="badge bg-success">Ativo</span>
                             {% else %}
                                 <span class="badge bg-secondary">Inativo</span>
@@ -38,11 +49,11 @@
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="/admin/usuarios/editar/{{ usuario.id }}" class="btn btn-outline-primary">
+                                <a href="/admin/planos/editar/{{ plano.id }}" class="btn btn-outline-primary">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <button type="button" class="btn btn-outline-danger" 
-                                    onclick="confirmarExclusao({{ usuario.id }}, '{{ usuario.nome }}')">
+                                    onclick="confirmarExclusao({{ plano.id }}, '{{ plano.nome }}')">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
@@ -55,22 +66,20 @@
         {% else %}
         <div class="text-center py-5">
             <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
-            <h5 class="mt-3 text-muted">Nenhum usuário encontrado</h5>
-            <p class="text-muted">Crie o primeiro usuário para começar.</p>
-            <a href="/admin/usuarios/novo" class="btn btn-primary">
-                <i class="bi bi-plus me-1"></i> Criar Primeiro Usuário
+            <h5 class="mt-3 text-muted">Nenhum plano encontrado</h5>
+            <p class="text-muted">Crie o primeiro plano para começar.</p>
+            <a href="/admin/planos/novo" class="btn btn-primary">
+                <i class="bi bi-plus me-1"></i> Criar Primeiro Plano
             </a>
         </div>
         {% endif %}
     </div>
 </div>
-
-<!-- Toast de exclusão de usuário -->
 <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055">
     <div id="toastExclusao" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
-                Tem certeza que deseja excluir o usuário <strong id="nomeUsuarioToast"></strong>? Esta ação não pode ser desfeita!
+                Tem certeza que deseja excluir o plano <strong id="nomePlanoToast"></strong>? Esta ação não pode ser desfeita!
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
         </div>
@@ -87,10 +96,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     window.confirmarExclusao = function(id, nome) {
-        // Atualiza o nome do usuário no toast
-        document.getElementById('nomeUsuarioToast').textContent = nome;
-        // Corrige a rota para o plural correto
-        document.getElementById('formExclusaoToast').action = '/admin/usuarios/excluir/' + id;
+        // Atualiza o nome do plano no toast
+        document.getElementById('nomePlanoToast').textContent = nome;
+        // Atualiza o action do form
+        document.getElementById('formExclusaoToast').action = '/admin/planos/excluir/' + id;
         // Mostra o toast
         var toastEl = document.getElementById('toastExclusao');
         var toast = new bootstrap.Toast(toastEl, { autohide: false });

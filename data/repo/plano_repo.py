@@ -26,12 +26,14 @@ def alterar(plano: Plano) -> bool:
         cursor = conn.cursor()
         cursor.execute(ALTERAR_PLANO, (
             plano.nome,
+            plano.descricao,
             plano.preco,
-            plano.id,
             plano.duracao_dias,
-            plano.descricao
+            plano.id
         ))
+        conn.commit()  # Não esqueça de commitar!
         return cursor.rowcount > 0
+
 
 def excluir(id: int) -> bool:
     with get_connection() as conn:
