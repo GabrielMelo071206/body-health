@@ -504,10 +504,6 @@ async def admin_planos_editar_post(
     return RedirectResponse("/admin/planos", status_code=303)
 
 
-@app.get("/admin/usuarios{id}")
-async def listar_usuarios(request: Request):
-    usuarios = usuario_repo.obter_por_id # Buscar do banco
-    return templates.TemplateResponse("admin/usuarios.html", {"request": request, "usuarios": usuarios})
 
 # Página de confirmação
 @app.get("/admin/usuarios/excluir/{id}")
@@ -691,6 +687,154 @@ async def test_email_quick():
     except Exception as e:
         return {"status": f"❌ ERRO: {str(e)}", "service": "Body Health Email"}
 
+# =================== GESTÃO DE USUÁRIOS ===================
+@app.get("/admin/usuarios")
+@requer_autenticacao(['admin'])
+async def admin_usuarios_listar(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
+    usuarios = usuario_repo.obter_todos()
+    return templates.TemplateResponse("admin/usuarios/listar.html", {
+        "request": request,
+        "usuario": usuario_logado,
+        "usuarios": usuarios
+    })
+
+@app.get("/admin/usuarios/novo")
+@requer_autenticacao(['admin'])
+async def admin_usuarios_novo_get(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
+    return templates.TemplateResponse("admin/usuarios/form.html", {
+        "request": request,
+        "usuario": usuario_logado,
+        "titulo": "Criar Novo Usuário",
+        "acao": "/admin/usuarios/novo"
+    })
+
+@app.post("/admin/usuarios/novo")
+@requer_autenticacao(['admin'])
+async def admin_usuarios_novo_post(
+    request: Request,
+    nome: str = Form(...),
+    email: str = Form(...),
+    senha: str = Form(...),
+    perfil: str = Form(...),
+    usuario_logado: dict = Depends(obter_usuario_logado)
+):
+    # Verificar se email já existe
+    if usuario_repo.obter_por_email(email):
+        return templates.TemplateResponse("admin/usuarios/form.html", {
+            "request": request,
+            "usuario": usuario_logado,
+            "titulo": "Criar Novo Usuário",
+            "acao": "/admin/usuarios/novo",
+            "erro": "Email já cadastrado"
+        })
+    
+    # Criar hash da senha
+    hash_senha = criar_hash_senha(senha)
+    
+    # Criar usuário
+    usuario = Usuario(
+        id=0,
+        nome=nome,
+        email=email,
+        senha=hash_senha,
+        perfil=perfil
+    )
+    
+    usuario_id = usuario_repo.inserir(usuario)
+    
+    # Se for cliente, criar registro na tabela cliente
+    if perfil == "cliente":
+        cliente = Cliente(usuario_id=usuario_id, plano_id=None)
+        cliente_repo.inserir(cliente)
+    
+    return RedirectResponse("/admin/usuarios", status_code=303)
+
+@app.get("/admin/usuarios/editar/{usuario_id}")
+@requer_autenticacao(['admin'])
+async def admin_usuarios_editar_get(request: Request, usuario_id: int, usuario_logado: dict = Depends(obter_usuario_logado)):
+    usuario = usuario_repo.obter_por_id(usuario_id)
+    if not usuario:
+        return RedirectResponse("/admin/usuarios", status_code=303)
+    
+    return templates.TemplateResponse("admin/usuarios/form.html", {
+        "request": request,
+        "usuario": usuario_logado,
+        "usuario_edicao": usuario,
+        "titulo": "Editar Usuário",
+        "acao": f"/admin/usuarios/editar/{usuario_id}"
+    })
+
+@app.post("/admin/usuarios/editar/{usuario_id}")
+@requer_autenticacao(['admin'])
+async def admin_usuarios_editar_post(
+    request: Request,
+    usuario_id: int,
+    nome: str = Form(...),
+    email: str = Form(...),
+    senha: str = Form(None),
+    perfil: str = Form(...),
+    usuario_logado: dict = Depends(obter_usuario_logado)
+):
+    usuario = usuario_repo.obter_por_id(usuario_id)
+    if not usuario:
+        return RedirectResponse("/admin/usuarios", status_code=303)
+    
+    # Verificar se email já existe (exceto para o próprio usuário)
+    usuario_email_existente = usuario_repo.obter_por_email(email)
+    if usuario_email_existente and usuario_email_existente.id != usuario_id:
+        return templates.TemplateResponse("admin/usuarios/form.html", {
+            "request": request,
+            "usuario": usuario_logado,
+            "usuario_edicao": usuario,
+            "titulo": "Editar Usuário",
+            "acao": f"/admin/usuarios/editar/{usuario_id}",
+            "erro": "Email já cadastrado por outro usuário"
+        })
+    
+    # Atualizar dados
+    usuario.nome = nome
+    usuario.email = email
+    usuario.perfil = perfil
+    
+    # Só atualizar senha se foi informada
+    if senha and senha.strip():
+        usuario.senha = criar_hash_senha(senha)
+    
+    usuario_repo.alterar(usuario)
+    
+    return RedirectResponse("/admin/usuarios", status_code=303)
+
+@app.post("/admin/usuarios/excluir/{usuario_id}")
+@requer_autenticacao(['admin'])
+async def admin_usuarios_excluir(request: Request, usuario_id: int, usuario_logado: dict = Depends(obter_usuario_logado)):
+    # Não permitir que admin exclua a si mesmo
+    if usuario_id == usuario_logado['id']:
+        return RedirectResponse("/admin/usuarios?erro=Não é possível excluir seu próprio usuário", status_code=303)
+    
+    try:
+        # Verificar se usuário existe
+        usuario = usuario_repo.obter_por_id(usuario_id)
+        if not usuario:
+            return RedirectResponse("/admin/usuarios?erro=Usuário não encontrado", status_code=303)
+        
+        # Excluir registros relacionados primeiro
+        if usuario.perfil == "cliente":
+            cliente_repo.excluir(usuario_id)
+        elif usuario.perfil == "profissional":
+            profissional_repo.excluir(usuario_id)
+        
+        # Excluir usuário
+        success = usuario_repo.excluir(usuario_id)
+        
+        if success:
+            return RedirectResponse("/admin/usuarios?sucesso=Usuário excluído com sucesso", status_code=303)
+        else:
+            return RedirectResponse("/admin/usuarios?erro=Erro ao excluir usuário", status_code=303)
+            
+    except Exception as e:
+        print(f"[ERRO] Erro ao excluir usuário {usuario_id}: {str(e)}")
+        return RedirectResponse("/admin/usuarios?erro=Erro interno ao excluir usuário", status_code=303)
+    
 if __name__ == "__main__":
     import uvicorn
     print("🚀 Iniciando Body Health com Email Service integrado...")

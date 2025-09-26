@@ -1,0 +1,3 @@
+[tool.uvicorn.reload]
+# Exclui explicitamente a pasta 'venv' do monitoramento de alterações
+exclude = ["venv", ".venv"]

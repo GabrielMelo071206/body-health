@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
     window.confirmarExclusao = function(id, nome) {
         // Atualiza o nome do usuário no toast
         document.getElementById('nomeUsuarioToast').textContent = nome;
-        // Atualiza o action do form
+        // Corrige a rota para o plural correto
         document.getElementById('formExclusaoToast').action = '/admin/usuarios/excluir/' + id;
         // Mostra o toast
         var toastEl = document.getElementById('toastExclusao');
