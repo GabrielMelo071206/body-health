@@ -269,7 +269,7 @@ async def cadastro_cliente_post(
 
     usuario_id = usuario_repo.inserir(usuario)
 
-    cliente = Cliente(usuario_id=usuario_id, id=None)
+    cliente = Cliente(usuario_id=usuario_id)
     cliente_repo.inserir(cliente)
 
     return RedirectResponse("/login_cliente", status_code=303)
