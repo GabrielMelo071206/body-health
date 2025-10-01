@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> - Personal Trainer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --sidebar-bg: #212529;
+            --sidebar-hover: #2c3034;
+        }
+        
+        body {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 250px;
+            background-color: var(--sidebar-bg);
+            padding-top: 1rem;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.85);
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s;
+        }
+        
+        .sidebar .nav-link:hover {
+            background-color: var(--sidebar-hover);
+            color: #fff;
+        }
+        
+        .sidebar .nav-link.active {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+        
+        .sidebar .nav-link i {
+            width: 20px;
+            margin-right: 10px;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+        }
+        
+        .page-header {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            transition: transform 0.2s;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+        }
+        
+        .btn-action {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="text-center mb-4">
+            <h4 class="text-white">
+                <i class="bi bi-person-badge"></i> Personal
+            </h4>
+            <small class="text-white-50">{{ session.get('usuario_nome', 'Personal') }}</small>
+        </div>
+        
+        <nav class="nav flex-column">
+            <a class="nav-link {% if request.path == '/personal/dashboard' %}active{% endif %}" href="/personal/dashboard">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a class="nav-link {% if request.path.startswith('/personal/alunos') %}active{% endif %}" href="/personal/alunos">
+                <i class="bi bi-people"></i> Meus Alunos
+            </a>
+            <a class="nav-link {% if request.path.startswith('/personal/treinos') %}active{% endif %}" href="/personal/treinos">
+                <i class="bi bi-clipboard-check"></i> Treinos
+            </a>
+            <a class="nav-link {% if request.path.startswith('/personal/avaliacoes') %}active{% endif %}" href="/personal/avaliacoes">
+                <i class="bi bi-clipboard-data"></i> Avaliações Físicas
+            </a>
+            <a class="nav-link {% if request.path.startswith('/personal/progressos') %}active{% endif %}" href="/personal/progressos">
+                <i class="bi bi-graph-up"></i> Progressos
+            </a>
+            <a class="nav-link {% if request.path.startswith('/personal/perfil') %}active{% endif %}" href="/personal/perfil">
+                <i class="bi bi-person-circle"></i> Meu Perfil
+            </a>
+            
+            <hr class="text-white-50">
+            
+            <a class="nav-link text-danger" href="/logout">
+                <i class="bi bi-box-arrow-right"></i> Sair
+            </a>
+        </nav>
+    </div>
+    
+    <div class="main-content">
+        <div class="page-header">
+            <h2 class="mb-0">{% block titulo %}{% endblock %}</h2>
+            {% if subtitulo %}
+            <p class="text-muted mb-0">{% block subtitulo %}{% endblock %}</p>
+            {% endif %}
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,131 @@
+{% extends "personal/base_personal.html" %}
+
+{% block titulo %}Progressos dos Alunos{% endblock %}
+{% block subtitulo %}Acompanhe a evolução dos seus alunos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-graph-up me-2"></i>Registros de Progresso
+        </h5>
+        <a href="/personal/progressos/novo" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Registrar Progresso
+        </a>
+    </div>
+    <div class="card-body">
+        {% if progressos %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Data</th>
+                        <th>Peso (kg)</th>
+                        <th>Humor</th>
+                        <th>Energia</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prog in progressos %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                     style="width: 35px; height: 35px; font-size: 0.9rem;">
+                                    {{ prog.aluno_nome[0].upper() }}
+                                </div>
+                                <strong>{{ prog.aluno_nome }}</strong>
+                            </div>
+                        </td>
+                        <td>{{ prog.data_registro.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if prog.peso %}
+                            {{ prog.peso }} kg
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if prog.humor %}
+                            {% if prog.humor == 'Ótimo' %}
+                            <span class="badge bg-success">{{ prog.humor }}</span>
+                            {% elif prog.humor == 'Bom' %}
+                            <span class="badge bg-info">{{ prog.humor }}</span>
+                            {% elif prog.humor == 'Regular' %}
+                            <span class="badge bg-warning">{{ prog.humor }}</span>
+                            {% else %}
+                            <span class="badge bg-danger">{{ prog.humor }}</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if prog.energia %}
+                            <div class="d-flex align-items-center">
+                                <div class="progress" style="width: 80px; height: 20px;">
+                                    <div class="progress-bar 
+                                        {% if prog.energia >= 8 %}bg-success
+                                        {% elif prog.energia >= 5 %}bg-info
+                                        {% elif prog.energia >= 3 %}bg-warning
+                                        {% else %}bg-danger{% endif %}" 
+                                        role="progressbar" 
+                                        style="width: {{ prog.energia * 10 }}%"
+                                        aria-valuenow="{{ prog.energia }}" 
+                                        aria-valuemin="0" 
+                                        aria-valuemax="10">
+                                    </div>
+                                </div>
+                                <span class="ms-2">{{ prog.energia }}/10</span>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group" role="group">
+                                <a href="/personal/progressos/{{ prog.id }}" class="btn btn-sm btn-outline-primary" title="Ver Detalhes">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/personal/progressos/{{ prog.id }}/editar" class="btn btn-sm btn-outline-warning" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarExclusao({{ prog.id }})" title="Excluir">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-graph-up fs-1 text-muted"></i>
+            <h5 class="mt-3 text-muted">Nenhum progresso registrado</h5>
+            <p class="text-muted">Comece registrando o progresso dos seus alunos</p>
+            <a href="/personal/progressos/novo" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-lg me-1"></i> Registrar Primeiro Progresso
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmarExclusao(progressoId) {
+    if (confirm('Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/personal/progressos/excluir/${progressoId}`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

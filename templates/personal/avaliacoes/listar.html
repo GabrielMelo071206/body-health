@@ -1,0 +1,117 @@
+{% extends "personal/base_personal.html" %}
+
+{% block titulo %}Avaliações Físicas{% endblock %}
+{% block subtitulo %}Acompanhe as avaliações dos seus alunos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-clipboard-data me-2"></i>Lista de Avaliações
+        </h5>
+        <a href="/personal/avaliacoes/nova" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Nova Avaliação
+        </a>
+    </div>
+    <div class="card-body">
+        {% if avaliacoes %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Data</th>
+                        <th>Peso (kg)</th>
+                        <th>IMC</th>
+                        <th>% Gordura</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for aval in avaliacoes %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                     style="width: 35px; height: 35px; font-size: 0.9rem;">
+                                    {{ aval.aluno_nome[0].upper() }}
+                                </div>
+                                <strong>{{ aval.aluno_nome }}</strong>
+                            </div>
+                        </td>
+                        <td>{{ aval.data_avaliacao.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if aval.peso %}
+                            {{ aval.peso }} kg
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if aval.imc %}
+                            {{ aval.imc|round(1) }}
+                            {% if aval.imc < 18.5 %}
+                            <span class="badge bg-warning">Baixo</span>
+                            {% elif aval.imc < 25 %}
+                            <span class="badge bg-success">Normal</span>
+                            {% elif aval.imc < 30 %}
+                            <span class="badge bg-warning">Sobrepeso</span>
+                            {% else %}
+                            <span class="badge bg-danger">Obesidade</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if aval.percentual_gordura %}
+                            {{ aval.percentual_gordura|round(1) }}%
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group" role="group">
+                                <a href="/personal/avaliacoes/{{ aval.id }}" class="btn btn-sm btn-outline-primary" title="Ver Detalhes">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/personal/avaliacoes/{{ aval.id }}/editar" class="btn btn-sm btn-outline-warning" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarExclusao({{ aval.id }})" title="Excluir">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-clipboard-data fs-1 text-muted"></i>
+            <h5 class="mt-3 text-muted">Nenhuma avaliação cadastrada</h5>
+            <p class="text-muted">Comece realizando a primeira avaliação física</p>
+            <a href="/personal/avaliacoes/nova" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-lg me-1"></i> Criar Primeira Avaliação
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmarExclusao(avaliacaoId) {
+    if (confirm('Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/personal/avaliacoes/excluir/${avaliacaoId}`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

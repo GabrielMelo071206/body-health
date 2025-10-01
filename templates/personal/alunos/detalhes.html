@@ -1,0 +1,244 @@
+{% extends "personal/base_personal.html" %}
+
+{% block titulo %}{{ aluno.nome }}{% endblock %}
+{% block subtitulo %}Detalhes e histórico do aluno{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                             style="width: 80px; height: 80px; font-size: 2rem;">
+                            {{ aluno.nome[0].upper() }}
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h3 class="mb-1">{{ aluno.nome }}</h3>
+                        <p class="text-muted mb-2">
+                            <i class="bi bi-envelope me-1"></i>{{ aluno.email }}
+                        </p>
+                        <div>
+                            {% if aluno.status == 'ativo' %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% elif aluno.status == 'inativo' %}
+                            <span class="badge bg-secondary">Inativo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Cancelado</span>
+                            {% endif %}
+                            
+                            {% if aluno.objetivo %}
+                            <span class="badge bg-info">{{ aluno.objetivo }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <a href="/personal/alunos/{{ aluno.id }}/editar" class="btn btn-warning">
+                            <i class="bi bi-pencil me-1"></i> Editar
+                        </a>
+                        <a href="/personal/treinos/novo?aluno={{ aluno.id }}" class="btn btn-success">
+                            <i class="bi bi-clipboard-plus me-1"></i> Novo Treino
+                        </a>
+                        <a href="/personal/avaliacoes/nova?aluno={{ aluno.id }}" class="btn btn-info">
+                        <i class="bi bi-plus-lg me-1"></i> Criar Primeira Avaliação
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="tab-pane fade" id="progresso" role="tabpanel">
+                {% if progressos %}
+                <div class="list-group list-group-flush">
+                    {% for prog in progressos %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="mb-1">{{ prog.data_registro.strftime('%d/%m/%Y') }}</h6>
+                                <p class="mb-1">
+                                    Peso: {{ prog.peso if prog.peso else '-' }} kg
+                                    {% if prog.humor %}
+                                    | Humor: {{ prog.humor }}
+                                    {% endif %}
+                                    {% if prog.energia %}
+                                    | Energia: {{ prog.energia }}/10
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-graph-up fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">Nenhum registro de progresso</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Informações
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Objetivo:</dt>
+                    <dd class="col-sm-7">{{ aluno.objetivo if aluno.objetivo else 'Não definido' }}</dd>
+                    
+                    <dt class="col-sm-5">Status:</dt>
+                    <dd class="col-sm-7">
+                        {% if aluno.status == 'ativo' %}
+                        <span class="badge bg-success">Ativo</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ aluno.status|title }}</span>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-5">Início:</dt>
+                    <dd class="col-sm-7">{{ aluno.data_inicio.strftime('%d/%m/%Y') if aluno.data_inicio else '-' }}</dd>
+                </dl>
+                
+                {% if aluno.observacoes %}
+                <hr>
+                <h6 class="text-muted">Observações:</h6>
+                <p class="small mb-0">{{ aluno.observacoes }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="/personal/alunos" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+</div>
+{% endblock %}}" class="btn btn-info">
+                            <i class="bi bi-clipboard-data me-1"></i> Nova Avaliação
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stats-card">
+            <h6 class="text-muted mb-1">Data de Início</h6>
+            <h5 class="mb-0">{{ aluno.data_inicio.strftime('%d/%m/%Y') if aluno.data_inicio else '-' }}</h5>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card">
+            <h6 class="text-muted mb-1">Treinos Ativos</h6>
+            <h5 class="mb-0">{{ treinos_ativos|length }}</h5>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card">
+            <h6 class="text-muted mb-1">Última Avaliação</h6>
+            <h5 class="mb-0">{{ ultima_avaliacao.strftime('%d/%m/%Y') if ultima_avaliacao else 'Nenhuma' }}</h5>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <ul class="nav nav-tabs" id="alunoTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="treinos-tab" data-bs-toggle="tab" data-bs-target="#treinos" type="button">
+                    <i class="bi bi-clipboard-check me-1"></i> Treinos
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="avaliacoes-tab" data-bs-toggle="tab" data-bs-target="#avaliacoes" type="button">
+                    <i class="bi bi-clipboard-data me-1"></i> Avaliações
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="progresso-tab" data-bs-toggle="tab" data-bs-target="#progresso" type="button">
+                    <i class="bi bi-graph-up me-1"></i> Progresso
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content border border-top-0 rounded-bottom bg-white p-3" id="alunoTabsContent">
+            <div class="tab-pane fade show active" id="treinos" role="tabpanel">
+                {% if treinos_ativos %}
+                <div class="list-group list-group-flush">
+                    {% for treino in treinos_ativos %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ treino.nome }}</h6>
+                                <p class="mb-1 text-muted">{{ treino.descricao }}</p>
+                                <small class="text-muted">
+                                    <span class="badge bg-primary">{{ treino.objetivo }}</span>
+                                    <span class="badge bg-secondary">{{ treino.nivel_dificuldade }}</span>
+                                    <span class="badge bg-info">{{ treino.dias_semana }} dias/semana</span>
+                                </small>
+                            </div>
+                            <div>
+                                <a href="/personal/treinos/{{ treino.id }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-clipboard-x fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">Nenhum treino cadastrado</p>
+                    <a href="/personal/treinos/novo?aluno={{ aluno.id }}" class="btn btn-success">
+                        <i class="bi bi-plus-lg me-1"></i> Criar Primeiro Treino
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="tab-pane fade" id="avaliacoes" role="tabpanel">
+                {% if avaliacoes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Data</th>
+                                <th>Peso</th>
+                                <th>IMC</th>
+                                <th>% Gordura</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for aval in avaliacoes %}
+                            <tr>
+                                <td>{{ aval.data_avaliacao.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ aval.peso if aval.peso else '-' }} kg</td>
+                                <td>{{ aval.imc|round(1) if aval.imc else '-' }}</td>
+                                <td>{{ aval.percentual_gordura|round(1) if aval.percentual_gordura else '-' }}%</td>
+                                <td>
+                                    <a href="/personal/avaliacoes/{{ aval.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-clipboard-data fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">Nenhuma avaliação física cadastrada</p>
+                    <a href="/personal/avaliacoes/nova?aluno={{ aluno.id }
