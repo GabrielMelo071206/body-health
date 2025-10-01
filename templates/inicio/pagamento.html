@@ -4,23 +4,54 @@
     <div class="container mt-5">
         <h1 class="text-center mb-5 fw-bold text-primary">Finalizar Pagamento</h1>
 
+        {% if erro %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ erro }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        {% if not tem_planos %}
+        <div class="alert alert-warning text-center">
+            <h4>Nenhum plano disponível no momento</h4>
+            <p>Por favor, entre em contato com o suporte ou tente novamente mais tarde.</p>
+            <a href="/planos" class="btn btn-primary">Voltar para Planos</a>
+        </div>
+        {% else %}
+
         <div class="row g-4">
             <div class="col-md-7 order-md-1">
                 <div class="card-custom">
                     <h4 class="mb-3">Escolha seu Plano</h4>
                     <div class="mb-4">
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="planType" id="planMensal" value="mensal" checked>
-                            <label class="form-check-label" for="planMensal">
-                                <strong>Plano Premium Mensal</strong> - R$19,90 / mês
+                        {% for plano in planos_pagos %}
+                        <div class="form-check {% if not loop.first %}mt-2{% endif %}">
+                            <input class="form-check-input plan-radio" 
+                                   type="radio" 
+                                   name="planType" 
+                                   id="plan{{ plano.id }}" 
+                                   value="{{ plano.id }}"
+                                   data-nome="{{ plano.nome }}"
+                                   data-preco="{{ plano.preco }}"
+                                   data-duracao="{{ plano.duracao_dias }}"
+                                   {% if plano_selecionado and plano.id == plano_selecionado.id %}checked{% elif not plano_selecionado and loop.first %}checked{% endif %}>
+                            <label class="form-check-label" for="plan{{ plano.id }}">
+                                <strong>{{ plano.nome }}</strong> - R${{ "%.2f"|format(plano.preco) }} / 
+                                {% if plano.duracao_dias >= 365 %}
+                                    ano
+                                    {% if plano.preco < (planos_pagos[0].preco * 12) %}
+                                    <span class="badge bg-success">Economize até 25%!</span>
+                                    {% endif %}
+                                {% elif plano.duracao_dias == 30 %}
+                                    mês
+                                {% else %}
+                                    {{ plano.duracao_dias }} dias
+                                {% endif %}
+                                <br>
+                                <small class="text-muted">{{ plano.descricao }}</small>
                             </label>
                         </div>
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="radio" name="planType" id="planAnual" value="anual">
-                            <label class="form-check-label" for="planAnual">
-                                <strong>Plano Premium Anual</strong> - R$179,90 / ano <span class="badge bg-success">Economize 25%!</span>
-                            </label>
-                        </div>
+                        {% endfor %}
                     </div>
 
                     <h4 class="mb-3">Método de Pagamento</h4>
@@ -106,7 +137,7 @@
                                         <option>Brasil</option>
                                         <option>Estados Unidos</option>
                                         <option>Canadá</option>
-                                        </select>
+                                    </select>
                                     <div class="invalid-feedback">
                                         Por favor, selecione um país válido.
                                     </div>
@@ -118,7 +149,7 @@
                                         <option>SP</option>
                                         <option>RJ</option>
                                         <option>MG</option>
-                                        </select>
+                                    </select>
                                     <div class="invalid-feedback">
                                         Por favor, forneça um estado válido.
                                     </div>
@@ -161,22 +192,32 @@
                     <ul class="list-group mb-3">
                         <li class="list-group-item d-flex justify-content-between lh-sm">
                             <div>
-                                <h6 class="my-0">Plano <span id="plano-nome">Premium Mensal</span></h6>
+                                <h6 class="my-0">Plano <span id="plano-nome">
+                                    {% if plano_selecionado %}{{ plano_selecionado.nome }}{% else %}Premium{% endif %}
+                                </span></h6>
                                 <small class="text-muted">Acesso ilimitado à Body Health</small>
                             </div>
-                            <span class="text-success" id="plano-preco">R$19,90</span>
+                            <span class="text-success" id="plano-preco">
+                                {% if plano_selecionado %}R${{ "%.2f"|format(plano_selecionado.preco) }}{% else %}R$0,00{% endif %}
+                            </span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
                             <span>Total (BRL)</span>
-                            <strong id="total-preco">R$19,90</strong>
+                            <strong id="total-preco">
+                                {% if plano_selecionado %}R${{ "%.2f"|format(plano_selecionado.preco) }}{% else %}R$0,00{% endif %}
+                            </strong>
                         </li>
                     </ul>
                     <p class="text-muted" style="font-size: 0.85rem;">Ao finalizar a assinatura, você concorda com nossos Termos de Uso e Política de Privacidade.</p>
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Script gerador de PIX dinâmico -->
+    <script src="/static/js/pix-generator.js"></script>
+    <!-- Script principal de pagamento -->
     <script src="/static/js/pagamento.js"></script>
 {%endblock%}

@@ -175,9 +175,44 @@ async def planos(request: Request):
             "erro": "Erro ao carregar planos. Tente novamente mais tarde."
         })
 
+# Substitua a rota @app.get("/pagamento") existente por esta:
+
 @app.get("/pagamento")
-async def pagamento(request: Request):
-    return templates.TemplateResponse("inicio/pagamento.html", {"request": request})
+async def pagamento(request: Request, plano_id: Optional[int] = None):
+    """Página de pagamento com planos do banco de dados"""
+    try:
+        # Buscar todos os planos pagos do banco
+        todos_planos = plano_repo.obter_todos()
+        planos_pagos = [p for p in todos_planos if p.preco > 0.0]
+        
+        # Ordenar por preço
+        planos_pagos.sort(key=lambda x: x.preco)
+        
+        # Se foi passado um plano_id específico, selecionar ele
+        plano_selecionado = None
+        if plano_id:
+            plano_selecionado = plano_repo.obter_por_id(plano_id)
+        
+        # Se não tem plano selecionado, pegar o primeiro da lista
+        if not plano_selecionado and planos_pagos:
+            plano_selecionado = planos_pagos[0]
+        
+        return templates.TemplateResponse("inicio/pagamento.html", {
+            "request": request,
+            "planos_pagos": planos_pagos,
+            "plano_selecionado": plano_selecionado,
+            "tem_planos": len(planos_pagos) > 0
+        })
+        
+    except Exception as e:
+        print(f"[ERRO] Erro ao carregar página de pagamento: {str(e)}")
+        return templates.TemplateResponse("inicio/pagamento.html", {
+            "request": request,
+            "planos_pagos": [],
+            "plano_selecionado": None,
+            "tem_planos": False,
+            "erro": "Erro ao carregar planos. Tente novamente mais tarde."
+        })
 
 # =================== AUTENTICAÇÃO ===================
 @app.get("/login")
