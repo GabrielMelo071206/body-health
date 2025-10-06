@@ -8,9 +8,11 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
 # Seus imports
+from data.dtos.login_dto import LoginDTO
 from data.repo import plano_repo, usuario_repo, cliente_repo, profissional_repo
 from util.security import criar_hash_senha, verificar_senha, gerar_senha_aleatoria
 from util.auth_decorator import criar_sessao, obter_usuario_logado, requer_autenticacao
@@ -236,26 +238,59 @@ async def login_cliente_get(request: Request):
     return templates.TemplateResponse("inicio/login_cliente.html", {"request": request})
 
 @app.post("/login_cliente")
-async def login_cliente_post(request: Request, email: str = Form(...), senha: str = Form(...)):
+async def login_cliente_post(request: Request, email: str = Form(), senha: str = Form()):
     usuario = usuario_repo.obter_por_email(email)
-
-    if not usuario or usuario.perfil != "cliente" or not verificar_senha(senha, usuario.senha):
-        return templates.TemplateResponse(
-            "inicio/login_cliente.html",
-            {"request": request, "erro": "Email ou senha inválidos"}
-        )
-
-    # Criar sessão
-    usuario_dict = {
-        "id": usuario.id,
-        "nome": usuario.nome,
-        "email": usuario.email,
-        "perfil": usuario.perfil,
-        "foto": usuario.foto
+    
+    dados_formulario = {
+        "email": email   
     }
-    criar_sessao(request, usuario_dict)
+    
+    try:
+        login_dto = LoginDTO(email=email, senha=senha)
 
-    return RedirectResponse("/", status_code=303)
+        if not usuario or usuario.perfil != "cliente" or not verificar_senha(login_dto.senha, usuario.senha):
+            return templates.TemplateResponse(
+                "inicio/login_cliente.html",
+                {"request": request, "erro": "Email ou senha inválidos"}
+            )
+
+        # Criar sessão
+        usuario_dict = {
+            "id": usuario.id,
+            "nome": usuario.nome,
+            "email": usuario.email,
+            "perfil": usuario.perfil,
+            "foto": usuario.foto
+        }
+        criar_sessao(request, usuario_dict)
+
+        return RedirectResponse("/", status_code=303)
+    except ValidationError as e:
+        # Extrair mensagens de erro do Pydantic
+        erros = []
+        for erro in e.errors():
+            campo = erro['loc'][0] if erro['loc'] else 'campo'
+            mensagem = erro['msg']
+            erros.append(f"{campo.capitalize()}: {mensagem}")
+
+        erro_msg = " | ".join(erros)
+        # logger.warning(f"Erro de validação no cadastro: {erro_msg}")
+
+        # Retornar template com dados preservados e erro
+        return templates.TemplateResponse("inicio/login_cliente.html", {
+            "request": request,
+            "erro": erro_msg,
+            "dados": dados_formulario  # Preservar dados digitados
+        })
+
+    except Exception as e:
+        # logger.error(f"Erro ao processar cadastro: {e}")
+
+        return templates.TemplateResponse("inicio/login_cliente.html", {
+            "request": request,
+            "erro": "Erro ao processar cadastro. Tente novamente.",
+            "dados": dados_formulario
+        })
 
 @app.get("/login_profissional")
 async def login_profissional_get(request: Request):
@@ -281,6 +316,7 @@ async def login_profissional_post(request: Request, email: str = Form(...), senh
     criar_sessao(request, usuario_dict)
 
     return RedirectResponse("/personal/dashboard", status_code=303)
+    
 
 @app.get("/logout")
 async def logout(request: Request):
