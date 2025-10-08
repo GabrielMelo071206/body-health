@@ -1100,7 +1100,6 @@ async def personal_alunos_novo_get(request: Request, usuario_logado: dict = Depe
         "aluno": None,
         "clientes_disponiveis": clientes_disponiveis
     })
-
 @app.post("/personal/alunos/salvar")
 @requer_autenticacao(['profissional'])
 async def personal_alunos_salvar(
@@ -1114,16 +1113,22 @@ async def personal_alunos_salvar(
     usuario_logado: dict = Depends(obter_usuario_logado)
 ):
     try:
-        # Buscar personal
+        # Buscar ou criar personal do profissional
         profissional = profissional_repo.obter_por_id(usuario_logado['id'])
-        personal = personal_repo.obter_por_profissional(profissional.id)
-        
+        personal = personal_repo.obter_por_profissional(profissional.id) if profissional else None
+
         if not personal:
-            return RedirectResponse("/personal/alunos?erro=Personal não encontrado", status_code=303)
-        
+            # Criar novo personal automaticamente
+            personal = Personal(
+                id=0,
+                profissional_id=profissional.id,
+                total_alunos=0
+            )
+            personal_repo.inserir(personal)
+
         # Converter data
         data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
-        
+
         if aluno_id:
             # Atualizar aluno existente
             aluno = personal_aluno_repo.obter_por_id(aluno_id)
@@ -1145,11 +1150,11 @@ async def personal_alunos_salvar(
                 observacoes=observacoes
             )
             personal_aluno_repo.inserir(novo_aluno)
-            
+
             # Atualizar contador de alunos do personal
             personal.total_alunos += 1
             personal_repo.alterar(personal)
-        
+
         return RedirectResponse("/personal/alunos?sucesso=Aluno salvo com sucesso", status_code=303)
     except Exception as e:
         print(f"[ERRO] Salvar aluno: {str(e)}")
@@ -1209,7 +1214,7 @@ async def personal_alunos_detalhes(
     except Exception as e:
         print(f"[ERRO] Detalhes aluno: {str(e)}")
         return RedirectResponse("/personal/alunos?erro=Erro ao carregar detalhes", status_code=303)
-
+    
 @app.get("/personal/alunos/{aluno_id}/editar")
 @requer_autenticacao(['profissional'])
 async def personal_alunos_editar_get(
@@ -1238,7 +1243,8 @@ async def personal_alunos_editar_get(
         return templates.TemplateResponse("personal/alunos/form.html", {
             "request": request,
             "usuario": usuario_logado,
-            "aluno": aluno
+            "aluno": aluno,
+            "clientes_disponiveis": []  # Não precisa ao editar
         })
     except Exception as e:
         print(f"[ERRO] Editar aluno: {str(e)}")
@@ -1293,6 +1299,214 @@ async def personal_treinos_listar(request: Request, usuario_logado: dict = Depen
             "usuario": usuario_logado,
             "treinos": []
         })
+
+# =================== GESTÃO COMPLETA DE TREINOS ===================
+# Adicione estas rotas após a rota personal_treinos_listar existente
+
+@app.get("/personal/treinos/novo")
+@requer_autenticacao(['profissional'])
+async def personal_treinos_novo_get(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
+    """Formulário para criar novo treino"""
+    try:
+        # Buscar personal
+        profissional = profissional_repo.obter_por_id(usuario_logado['id'])
+        personal = personal_repo.obter_por_profissional(profissional.id) if profissional else None
+        
+        if not personal:
+            return RedirectResponse("/personal/treinos?erro=Personal não encontrado", status_code=303)
+        
+        # Buscar alunos do personal
+        alunos_rel = personal_aluno_repo.obter_alunos_por_personal(personal.id)
+        alunos_disponiveis = []
+        
+        for rel in alunos_rel:
+            cliente = cliente_repo.obter_por_id(rel.aluno_id)
+            if cliente:
+                usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id)
+                if usuario_aluno:
+                    alunos_disponiveis.append({
+                        'id': rel.id,
+                        'nome': usuario_aluno.nome,
+                        'email': usuario_aluno.email
+                    })
+        
+        return templates.TemplateResponse("personal/treinos/form.html", {
+            "request": request,
+            "usuario": usuario_logado,
+            "treino": None,
+            "alunos_disponiveis": alunos_disponiveis,
+            "titulo": "Criar Novo Treino",
+            "acao": "/personal/treinos/salvar"
+        })
+    except Exception as e:
+        print(f"[ERRO] Novo treino GET: {str(e)}")
+        return RedirectResponse("/personal/treinos?erro=Erro ao carregar formulário", status_code=303)
+
+
+@app.post("/personal/treinos/salvar")
+@requer_autenticacao(['profissional'])
+async def personal_treinos_salvar(
+    request: Request,
+    treino_id: Optional[int] = Form(None),
+    aluno_id: int = Form(...),
+    nome: str = Form(...),
+    objetivo: str = Form(...),
+    nivel_dificuldade: str = Form(...),
+    frequencia_semanal: int = Form(...),
+    duracao_semanas: int = Form(...),
+    descricao: Optional[str] = Form(None),
+    observacoes: Optional[str] = Form(None),
+    status: str = Form('ativo'),
+    usuario_logado: dict = Depends(obter_usuario_logado)
+):
+    """Salvar treino (criar ou atualizar)"""
+    try:
+        if treino_id:
+            # Atualizar treino existente
+            treino = treino_personalizado_repo.obter_por_id(treino_id)
+            if treino:
+                treino.nome = nome
+                treino.objetivo = objetivo
+                treino.nivel_dificuldade = nivel_dificuldade
+                treino.frequencia_semanal = frequencia_semanal
+                treino.duracao_semanas = duracao_semanas
+                treino.descricao = descricao
+                treino.observacoes = observacoes
+                treino.status = status
+                treino_personalizado_repo.alterar(treino)
+                return RedirectResponse("/personal/treinos?sucesso=Treino atualizado com sucesso", status_code=303)
+        else:
+            # Criar novo treino
+            novo_treino = TreinoPersonalizado(
+                id=0,
+                aluno_id=aluno_id,
+                nome=nome,
+                objetivo=objetivo,
+                nivel_dificuldade=nivel_dificuldade,
+                frequencia_semanal=frequencia_semanal,
+                duracao_semanas=duracao_semanas,
+                descricao=descricao,
+                observacoes=observacoes,
+                status=status,
+                criado_em=datetime.now()
+            )
+            treino_personalizado_repo.inserir(novo_treino)
+            return RedirectResponse("/personal/treinos?sucesso=Treino criado com sucesso", status_code=303)
+            
+    except Exception as e:
+        print(f"[ERRO] Salvar treino: {str(e)}")
+        return RedirectResponse("/personal/treinos?erro=Erro ao salvar treino", status_code=303)
+
+
+@app.get("/personal/treinos/{treino_id}")
+@requer_autenticacao(['profissional'])
+async def personal_treinos_detalhes(
+    request: Request,
+    treino_id: int,
+    usuario_logado: dict = Depends(obter_usuario_logado)
+):
+    """Ver detalhes do treino"""
+    try:
+        treino = treino_personalizado_repo.obter_por_id(treino_id)
+        if not treino:
+            return RedirectResponse("/personal/treinos?erro=Treino não encontrado", status_code=303)
+        
+        # Buscar dados do aluno
+        aluno_rel = personal_aluno_repo.obter_por_id(treino.aluno_id)
+        aluno_nome = "N/A"
+        
+        if aluno_rel:
+            cliente = cliente_repo.obter_por_id(aluno_rel.aluno_id)
+            if cliente:
+                usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id)
+                if usuario_aluno:
+                    aluno_nome = usuario_aluno.nome
+        
+        # Buscar sessões de treino (se houver)
+        sessoes = sessao_treino_repo.obter_por_treino(treino_id) if hasattr(sessao_treino_repo, 'obter_por_treino') else []
+        
+        return templates.TemplateResponse("personal/treinos/detalhes.html", {
+            "request": request,
+            "usuario": usuario_logado,
+            "treino": treino,
+            "aluno_nome": aluno_nome,
+            "sessoes": sessoes
+        })
+    except Exception as e:
+        print(f"[ERRO] Detalhes treino: {str(e)}")
+        return RedirectResponse("/personal/treinos?erro=Erro ao carregar detalhes", status_code=303)
+
+
+@app.get("/personal/treinos/{treino_id}/editar")
+@requer_autenticacao(['profissional'])
+async def personal_treinos_editar_get(
+    request: Request,
+    treino_id: int,
+    usuario_logado: dict = Depends(obter_usuario_logado)
+):
+    """Formulário para editar treino"""
+    try:
+        treino = treino_personalizado_repo.obter_por_id(treino_id)
+        if not treino:
+            return RedirectResponse("/personal/treinos?erro=Treino não encontrado", status_code=303)
+        
+        # Buscar personal e alunos
+        profissional = profissional_repo.obter_por_id(usuario_logado['id'])
+        personal = personal_repo.obter_por_profissional(profissional.id) if profissional else None
+        
+        alunos_rel = personal_aluno_repo.obter_alunos_por_personal(personal.id) if personal else []
+        alunos_disponiveis = []
+        
+        for rel in alunos_rel:
+            cliente = cliente_repo.obter_por_id(rel.aluno_id)
+            if cliente:
+                usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id)
+                if usuario_aluno:
+                    alunos_disponiveis.append({
+                        'id': rel.id,
+                        'nome': usuario_aluno.nome,
+                        'email': usuario_aluno.email
+                    })
+        
+        return templates.TemplateResponse("personal/treinos/form.html", {
+            "request": request,
+            "usuario": usuario_logado,
+            "treino": treino,
+            "alunos_disponiveis": alunos_disponiveis,
+            "titulo": "Editar Treino",
+            "acao": "/personal/treinos/salvar"
+        })
+    except Exception as e:
+        print(f"[ERRO] Editar treino GET: {str(e)}")
+        return RedirectResponse("/personal/treinos?erro=Erro ao carregar treino", status_code=303)
+
+
+@app.post("/personal/treinos/excluir/{treino_id}")
+@requer_autenticacao(['profissional'])
+async def personal_treinos_excluir(
+    request: Request,
+    treino_id: int,
+    usuario_logado: dict = Depends(obter_usuario_logado)
+):
+    """Excluir treino"""
+    try:
+        treino = treino_personalizado_repo.obter_por_id(treino_id)
+        if not treino:
+            return RedirectResponse("/personal/treinos?erro=Treino não encontrado", status_code=303)
+        
+        # Excluir sessões relacionadas primeiro (se houver)
+        if hasattr(sessao_treino_repo, 'excluir_por_treino'):
+            sessao_treino_repo.excluir_por_treino(treino_id)
+        
+        # Excluir treino
+        treino_personalizado_repo.excluir(treino_id)
+        
+        return RedirectResponse("/personal/treinos?sucesso=Treino excluído com sucesso", status_code=303)
+    except Exception as e:
+        print(f"[ERRO] Excluir treino: {str(e)}")
+        return RedirectResponse("/personal/treinos?erro=Erro ao excluir treino", status_code=303)
+
+
 
 # =================== GESTÃO DE AVALIAÇÕES FÍSICAS ===================
 @app.get("/personal/avaliacoes")

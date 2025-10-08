@@ -47,7 +47,18 @@
                             <span class="text-muted">-</span>
                             {% endif %}
                         </td>
-                        <td>{{ aluno.data_inicio.strftime('%d/%m/%Y') if aluno.data_inicio else '-' }}</td>
+                        <td>
+                        {% if aluno.data_inicio %}
+                            {% if aluno.data_inicio is string %}
+                                {% set parts = aluno.data_inicio.split(' ')[0].split('-') %}
+                                {{ parts[2] }}/{{ parts[1] }}/{{ parts[0] }}
+                            {% else %}
+                                {{ aluno.data_inicio.strftime('%d/%m/%Y') }}
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                        </td>
                         <td>
                             {% if aluno.status == 'ativo' %}
                             <span class="badge bg-success">Ativo</span>

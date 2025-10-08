@@ -85,3 +85,36 @@ def obter_por_id(id: int) -> Optional[TreinoPersonalizado]:
                 atualizado_em=row["atualizado_em"]
             ) 
 
+def obter_por_aluno(id: int) -> Optional[TreinoPersonalizado]:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(OBTER_POR_ALUNO, (id,))
+        rows = cursor.fetchall()
+        treinos = []
+        for row in rows:
+            treinos.append(TreinoPersonalizado(
+                id=row["id"],
+                personal_aluno_id=row["personal_aluno_id"],
+                nome=row["nome"],
+                descricao=row["descricao"],
+                objetivo=row["objetivo"],
+                nivel_dificuldade=row["nivel_dificuldade"],
+                duracao_semanas=row["duracao_semanas"],
+                dias_semana=row["dias_semana"],
+                divisao_treino=row["divisao_treino"],
+                observacoes=row["observacoes"],
+                status=row["status"],
+                data_inicio=row["data_inicio"],
+                data_fim=row["data_fim"],
+                criado_em=row["criado_em"],
+                atualizado_em=row["atualizado_em"]
+            ))
+        return treinos
+
+
+
+# OBTER_POR_ALUNO = """
+# SELECT * FROM treino_personalizado
+# WHERE personal_aluno_id=? AND status='ativo'
+# ORDER BY criado_em DESC
+# """

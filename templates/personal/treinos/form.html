@@ -1,0 +1,189 @@
+{% extends "personal/base_personal.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block subtitulo %}Preencha os dados do treino personalizado{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-clipboard-check me-2"></i>{{ titulo }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ acao }}">
+                    {% if treino %}
+                    <input type="hidden" name="treino_id" value="{{ treino.id }}">
+                    {% endif %}
+                    
+                    <div class="row g-3">
+                        <!-- Seleção de Aluno -->
+                        <div class="col-md-6">
+                            <label for="aluno_id" class="form-label">
+                                Aluno <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="aluno_id" name="aluno_id" required 
+                                    {% if treino %}disabled{% endif %}>
+                                <option value="">Selecione um aluno...</option>
+                                {% for aluno in alunos_disponiveis %}
+                                <option value="{{ aluno.id }}" 
+                                        {% if treino and treino.aluno_id == aluno.id %}selected{% endif %}>
+                                    {{ aluno.nome }} ({{ aluno.email }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if treino %}
+                            <input type="hidden" name="aluno_id" value="{{ treino.aluno_id }}">
+                            <small class="text-muted">O aluno não pode ser alterado após criação</small>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Nome do Treino -->
+                        <div class="col-md-6">
+                            <label for="nome" class="form-label">
+                                Nome do Treino <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   value="{{ treino.nome if treino else '' }}" 
+                                   placeholder="Ex: Treino Hipertrofia A" required>
+                        </div>
+                        
+                        <!-- Objetivo -->
+                        <div class="col-md-6">
+                            <label for="objetivo" class="form-label">
+                                Objetivo <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="objetivo" name="objetivo" required>
+                                <option value="">Selecione...</option>
+                                <option value="Hipertrofia" {% if treino and treino.objetivo == 'Hipertrofia' %}selected{% endif %}>Hipertrofia</option>
+                                <option value="Emagrecimento" {% if treino and treino.objetivo == 'Emagrecimento' %}selected{% endif %}>Emagrecimento</option>
+                                <option value="Condicionamento" {% if treino and treino.objetivo == 'Condicionamento' %}selected{% endif %}>Condicionamento</option>
+                                <option value="Força" {% if treino and treino.objetivo == 'Força' %}selected{% endif %}>Força</option>
+                                <option value="Resistência" {% if treino and treino.objetivo == 'Resistência' %}selected{% endif %}>Resistência</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Nível de Dificuldade -->
+                        <div class="col-md-6">
+                            <label for="nivel_dificuldade" class="form-label">
+                                Nível de Dificuldade <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="nivel_dificuldade" name="nivel_dificuldade" required>
+                                <option value="">Selecione...</option>
+                                <option value="Iniciante" {% if treino and treino.nivel_dificuldade == 'Iniciante' %}selected{% endif %}>Iniciante</option>
+                                <option value="Intermediário" {% if treino and treino.nivel_dificuldade == 'Intermediário' %}selected{% endif %}>Intermediário</option>
+                                <option value="Avançado" {% if treino and treino.nivel_dificuldade == 'Avançado' %}selected{% endif %}>Avançado</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Frequência Semanal -->
+                        <div class="col-md-6">
+                            <label for="frequencia_semanal" class="form-label">
+                                Frequência Semanal <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="frequencia_semanal" name="frequencia_semanal" required>
+                                <option value="">Quantas vezes por semana?</option>
+                                {% for i in range(1, 8) %}
+                                <option value="{{ i }}" 
+                                        {% if treino and treino.frequencia_semanal == i %}selected{% endif %}>
+                                    {{ i }}x por semana
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Duração em Semanas -->
+                        <div class="col-md-6">
+                            <label for="duracao_semanas" class="form-label">
+                                Duração (semanas) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="duracao_semanas" 
+                                   name="duracao_semanas" min="1" max="52" 
+                                   value="{{ treino.duracao_semanas if treino else 4 }}" required>
+                            <small class="text-muted">Duração total do programa de treino</small>
+                        </div>
+                        
+                        <!-- Status -->
+                        <div class="col-md-12">
+                            <label for="status" class="form-label">
+                                Status <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="ativo" {% if not treino or treino.status == 'ativo' %}selected{% endif %}>Ativo</option>
+                                <option value="pausado" {% if treino and treino.status == 'pausado' %}selected{% endif %}>Pausado</option>
+                                <option value="concluido" {% if treino and treino.status == 'concluido' %}selected{% endif %}>Concluído</option>
+                                <option value="cancelado" {% if treino and treino.status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Descrição -->
+                        <div class="col-md-12">
+                            <label for="descricao" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricao" name="descricao" rows="3" 
+                                      placeholder="Descreva o treino e seus exercícios principais...">{{ treino.descricao if treino else '' }}</textarea>
+                        </div>
+                        
+                        <!-- Observações -->
+                        <div class="col-md-12">
+                            <label for="observacoes" class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="2" 
+                                      placeholder="Observações sobre limitações, cuidados especiais, etc...">{{ treino.observacoes if treino else '' }}</textarea>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="/personal/treinos" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> 
+                            {% if treino %}Atualizar{% else %}Criar{% endif %} Treino
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Card de Ajuda -->
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb text-warning me-2"></i>Dicas para criar treinos efetivos
+                </h6>
+                <ul class="mb-0 small text-muted">
+                    <li>Avalie o nível atual do aluno antes de definir a dificuldade</li>
+                    <li>Considere os objetivos e limitações físicas do aluno</li>
+                    <li>Planeje progressões graduais ao longo das semanas</li>
+                    <li>Mantenha registros detalhados nas observações</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Validação adicional do formulário
+document.querySelector('form').addEventListener('submit', function(e) {
+    const frequencia = parseInt(document.getElementById('frequencia_semanal').value);
+    const duracao = parseInt(document.getElementById('duracao_semanas').value);
+    
+    if (duracao < 1 || duracao > 52) {
+        e.preventDefault();
+        alert('A duração deve estar entre 1 e 52 semanas');
+        return false;
+    }
+    
+    if (frequencia < 1 || frequencia > 7) {
+        e.preventDefault();
+        alert('A frequência deve estar entre 1 e 7 vezes por semana');
+        return false;
+    }
+});
+</script>
+{% endblock %}
