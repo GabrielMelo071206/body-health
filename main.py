@@ -2,6 +2,8 @@ from datetime import datetime
 import secrets
 from typing import Optional
 
+from data.dtos import cadastro_cliente_dto
+from data.dtos.cadastro_profissional_dto import CadastroProfissionalDTO
 from fastapi import (
     FastAPI, HTTPException, Request, Form, Depends, status
 )
@@ -334,7 +336,7 @@ async def cadastro_cliente_get(request: Request):
 async def cadastro_cliente_post(request: Request, nome: str = Form(...), email: str = Form(...), senha: str = Form(...)):
     try:
         # Validação com DTO
-        dto = CadastroClienteDTO(nome=nome, email=email, senha=senha)
+        dto = cadastro_cliente_dto.CadastroClienteDTO(nome=nome, email=email, senha=senha)
 
         if usuario_repo.obter_por_email(dto.email):
             return templates.TemplateResponse(
@@ -369,7 +371,7 @@ async def cadastro_profissional_get(request: Request):
 # CADASTRO PROFISSIONAL COM UPLOAD
 from fastapi import UploadFile, File
 from util.file_upload import salvar_foto_registro, validar_cpf_cnpj
-
+# =================== ROTA DE CADASTRO PROFISSIONAL ===================
 @app.post("/cadastro_profissional")
 async def cadastro_profissional_post(
     request: Request,
@@ -378,61 +380,90 @@ async def cadastro_profissional_post(
     senha: str = Form(...),
     especialidade: str = Form(...),
     registro_profissional: Optional[str] = Form(None),
-    cpf_cnpj: str = Form(...),  # NOVO
-    foto_registro: UploadFile = File(...)  # NOVO
+    cpf_cnpj: str = Form(...),
+    foto_registro: UploadFile = File(...)
 ):
+    # Preservar dados do formulário
+    dados_formulario = {
+        "nome": nome,
+        "email": email,
+        "especialidade": especialidade,
+        "registro_profissional": registro_profissional,
+        "cpf_cnpj": cpf_cnpj
+    }
+    
     try:
+        # Validação com DTO
+        dto = CadastroProfissionalDTO(
+            nome=nome,
+            email=email,
+            senha=senha,
+            especialidade=especialidade,
+            registro_profissional=registro_profissional,
+            cpf_cnpj=cpf_cnpj
+        )
+        
         # Validação de email existente
-        if usuario_repo.obter_por_email(email):
+        if usuario_repo.obter_por_email(dto.email):
             return templates.TemplateResponse(
                 "inicio/cadastro_profissional.html",
-                {"request": request, "erro": "Email já cadastrado"}
+                {"request": request, "erro": "Email já cadastrado", "dados": dados_formulario}
             )
         
-        # Validar CPF/CNPJ
-        if not validar_cpf_cnpj(cpf_cnpj):
+        # Validar CPF/CNPJ com função auxiliar
+        if not validar_cpf_cnpj(dto.cpf_cnpj):
             return templates.TemplateResponse(
                 "inicio/cadastro_profissional.html",
-                {"request": request, "erro": "CPF/CNPJ inválido"}
+                {"request": request, "erro": "CPF/CNPJ inválido", "dados": dados_formulario}
             )
         
         # Salvar foto
         path_foto = await salvar_foto_registro(foto_registro)
         
         # Criar usuário
-        hash_senha = criar_hash_senha(senha)
+        hash_senha = criar_hash_senha(dto.senha)
         usuario = Usuario(
-            id=0, nome=nome, email=email,
-            senha=hash_senha, perfil="profissional"
+            id=0,
+            nome=dto.nome,
+            email=dto.email,
+            senha=hash_senha,
+            perfil="profissional"
         )
         usuario_id = usuario_repo.inserir(usuario)
         
-        # Criar profissional com novos campos
+        # Criar profissional
         profissional = Profissional(
             id=usuario_id,
-            especialidade=especialidade,
-            registro_profissional=registro_profissional,
+            especialidade=dto.especialidade,
+            registro_profissional=dto.registro_profissional,
             data_solicitacao=datetime.now(),
             status="pendente",
-            cpf_cnpj=cpf_cnpj,  # NOVO
-            foto_registro=path_foto  # NOVO
+            cpf_cnpj=dto.cpf_cnpj,
+            foto_registro=path_foto
         )
         
         profissional_repo.inserir(profissional)
         
         return RedirectResponse("/login_profissional", status_code=303)
         
+    except ValidationError as e:
+        # Extrair primeira mensagem de erro do Pydantic
+        msg = e.errors()[0]['msg']
+        return templates.TemplateResponse(
+            "inicio/cadastro_profissional.html",
+            {"request": request, "erro": msg, "dados": dados_formulario}
+        )
     except HTTPException as e:
         return templates.TemplateResponse(
             "inicio/cadastro_profissional.html",
-            {"request": request, "erro": e.detail}
+            {"request": request, "erro": e.detail, "dados": dados_formulario}
         )
     except Exception as e:
+        print(f"[ERRO] Cadastro profissional: {str(e)}")
         return templates.TemplateResponse(
             "inicio/cadastro_profissional.html",
-            {"request": request, "erro": f"Erro interno: {str(e)}"}
+            {"request": request, "erro": f"Erro interno: {str(e)}", "dados": dados_formulario}
         )
-
 
 # Perfil
 @app.get("/perfil")

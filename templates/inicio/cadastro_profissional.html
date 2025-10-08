@@ -69,6 +69,22 @@
                     <div class="invalid-feedback">{{ erro }}</div>
                     {% endif %}
                 </div>
+
+                <!-- Repetir Senha -->
+                <div class="mb-3">
+                    <label for="senha_confirm" class="form-label">Repetir Senha *</label>
+                    <input 
+                        type="password" 
+                        class="form-control bg-secondary text-white border-0" 
+                        id="senha_confirm" 
+                        name="senha_confirm" 
+                        required 
+                        minlength="6"
+                        maxlength="50"
+                    >
+                    <div class="form-text text-muted">Digite a mesma senha novamente</div>
+                    <div class="invalid-feedback" id="senhaConfirmErro" style="display: none;">As senhas não coincidem</div>
+                </div>
                 
                 <!-- Especialidade e Registro -->
                 <div class="row">
@@ -178,12 +194,10 @@ document.getElementById('cpf_cnpj').addEventListener('input', function(e) {
     let valor = e.target.value.replace(/\D/g, '');
     
     if (valor.length <= 11) {
-        // CPF: 000.000.000-00
         valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
         valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
         valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
     } else {
-        // CNPJ: 00.000.000/0000-00
         valor = valor.replace(/^(\d{2})(\d)/, '$1.$2');
         valor = valor.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
         valor = valor.replace(/\.(\d{3})(\d)/, '.$1/$2');
@@ -198,21 +212,32 @@ document.getElementById('form-cadastro').addEventListener('submit', function(e) 
     const arquivo = document.getElementById('foto_registro').files[0];
     
     if (arquivo) {
-        // Verificar tamanho (5MB)
         if (arquivo.size > 5 * 1024 * 1024) {
             e.preventDefault();
             alert('Arquivo muito grande. Tamanho máximo: 5MB');
             return;
         }
-        
-        // Verificar tipo
         if (!arquivo.type.startsWith('image/')) {
             e.preventDefault();
             alert('Apenas imagens são permitidas');
             return;
         }
     }
-    
+
+    // Validar senhas
+    const senha = document.getElementById('senha').value;
+    const senhaConfirm = document.getElementById('senha_confirm').value;
+    if (senha !== senhaConfirm) {
+        e.preventDefault();
+        const erroDiv = document.getElementById('senhaConfirmErro');
+        erroDiv.style.display = 'block';
+        document.getElementById('senha_confirm').classList.add('is-invalid');
+        return;
+    } else {
+        document.getElementById('senhaConfirmErro').style.display = 'none';
+        document.getElementById('senha_confirm').classList.remove('is-invalid');
+    }
+
     // Desabilitar botão
     const btn = document.getElementById('btn-cadastrar');
     btn.disabled = true;
