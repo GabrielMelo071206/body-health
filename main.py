@@ -297,7 +297,7 @@ async def login_profissional_get(request: Request):
     return templates.TemplateResponse("inicio/login_profissional.html", {"request": request})
 
 @app.post("/login_profissional")
-async def login_profissional_post(request: Request, email: str = Form(...), senha: str = Form(...)):
+async def login_profissional_post(request: Request, email: str = Form(), senha: str = Form()):
     usuario = usuario_repo.obter_por_email(email)
 
     if not usuario or usuario.perfil != "profissional" or not verificar_senha(senha, usuario.senha):
@@ -323,39 +323,44 @@ async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/", status_code=303)
 
+
 # =================== CADASTROS ===================
+
 @app.get("/cadastro_cliente")
 async def cadastro_cliente_get(request: Request):
     return templates.TemplateResponse("inicio/cadastro_cliente.html", {"request": request})
 
 @app.post("/cadastro_cliente")
-async def cadastro_cliente_post(
-    request: Request,
-    nome: str = Form(...),
-    email: str = Form(...),
-    senha: str = Form(...)
-):
-    if usuario_repo.obter_por_email(email):
+async def cadastro_cliente_post(request: Request, nome: str = Form(...), email: str = Form(...), senha: str = Form(...)):
+    try:
+        # Validação com DTO
+        dto = CadastroClienteDTO(nome=nome, email=email, senha=senha)
+
+        if usuario_repo.obter_por_email(dto.email):
+            return templates.TemplateResponse(
+                "inicio/cadastro_cliente.html",
+                {"request": request, "erro": "Email já cadastrado", "form_data": dto.model_dump()}
+            )
+
+        hash_senha = criar_hash_senha(dto.senha)
+        usuario = Usuario(id=0, nome=dto.nome, email=dto.email, senha=hash_senha, perfil="cliente")
+        usuario_id = usuario_repo.inserir(usuario)
+        cliente_repo.inserir(Cliente(usuario_id=usuario_id))
+
+        return RedirectResponse("/login_cliente", status_code=303)
+
+    except ValidationError as e:
+        # Captura erros do Pydantic e mostra no template
+        msg = e.errors()[0]['msg']
         return templates.TemplateResponse(
             "inicio/cadastro_cliente.html",
-            {"request": request, "erro": "Email já cadastrado"}
+            {"request": request, "erro": msg, "form_data": {"nome": nome, "email": email}}
         )
-
-    hash_senha = criar_hash_senha(senha)
-    usuario = Usuario(
-        id=0,
-        nome=nome,
-        email=email,
-        senha=hash_senha,
-        perfil="cliente"
-    )
-
-    usuario_id = usuario_repo.inserir(usuario)
-
-    cliente = Cliente(usuario_id=usuario_id)
-    cliente_repo.inserir(cliente)
-
-    return RedirectResponse("/login_cliente", status_code=303)
+    except Exception as e:
+        return templates.TemplateResponse(
+            "inicio/cadastro_cliente.html",
+            {"request": request, "erro": f"Erro interno: {str(e)}", "form_data": {"nome": nome, "email": email}}
+        )
 
 @app.get("/cadastro_profissional")
 async def cadastro_profissional_get(request: Request):
@@ -427,6 +432,7 @@ async def cadastro_profissional_post(
             "inicio/cadastro_profissional.html",
             {"request": request, "erro": f"Erro interno: {str(e)}"}
         )
+
 
 # Perfil
 @app.get("/perfil")
