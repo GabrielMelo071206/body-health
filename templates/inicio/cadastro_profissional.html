@@ -11,9 +11,14 @@
                 <small>Seu cadastro será analisado pela nossa equipe</small>
             </p>
             
-            {% if erro %}
+            <!-- Mostrar todos os erros de validação -->
+            {% if erros %}
             <div class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ erro }}
+                <ul class="mb-0">
+                    {% for campo, msg in erros.items() %}
+                    <li>{{ campo.capitalize() }}: {{ msg }}</li>
+                    {% endfor %}
+                </ul>
             </div>
             {% endif %}
             
@@ -24,7 +29,7 @@
                         <label for="nome" class="form-label">Nome Completo *</label>
                         <input 
                             type="text" 
-                            class="form-control bg-secondary text-white border-0 {% if erro and 'nome' in erro.lower() %}is-invalid{% endif %}" 
+                            class="form-control bg-secondary text-white border-0 {% if erros and 'nome' in erros %}is-invalid{% endif %}" 
                             id="nome" 
                             name="nome" 
                             value="{{ dados.nome if dados else '' }}"
@@ -32,23 +37,17 @@
                             minlength="3"
                             maxlength="100"
                         >
-                        {% if erro and 'nome' in erro.lower() %}
-                        <div class="invalid-feedback">{{ erro }}</div>
-                        {% endif %}
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="email" class="form-label">Email *</label>
                         <input 
                             type="email" 
-                            class="form-control bg-secondary text-white border-0 {% if erro and 'email' in erro.lower() %}is-invalid{% endif %}" 
+                            class="form-control bg-secondary text-white border-0 {% if erros and 'email' in erros %}is-invalid{% endif %}" 
                             id="email" 
                             name="email" 
                             value="{{ dados.email if dados else '' }}"
                             required
                         >
-                        {% if erro and 'email' in erro.lower() %}
-                        <div class="invalid-feedback">{{ erro }}</div>
-                        {% endif %}
                     </div>
                 </div>
                 
@@ -57,7 +56,7 @@
                     <label for="senha" class="form-label">Senha *</label>
                     <input 
                         type="password" 
-                        class="form-control bg-secondary text-white border-0 {% if erro and 'senha' in erro.lower() %}is-invalid{% endif %}" 
+                        class="form-control bg-secondary text-white border-0 {% if erros and 'senha' in erros %}is-invalid{% endif %}" 
                         id="senha" 
                         name="senha" 
                         required 
@@ -65,9 +64,6 @@
                         maxlength="50"
                     >
                     <div class="form-text text-muted">Mínimo 6 caracteres</div>
-                    {% if erro and 'senha' in erro.lower() %}
-                    <div class="invalid-feedback">{{ erro }}</div>
-                    {% endif %}
                 </div>
 
                 <!-- Repetir Senha -->
@@ -75,14 +71,13 @@
                     <label for="senha_confirm" class="form-label">Repetir Senha *</label>
                     <input 
                         type="password" 
-                        class="form-control bg-secondary text-white border-0" 
+                        class="form-control bg-secondary text-white border-0 {% if erros and 'senha_confirm' in erros %}is-invalid{% endif %}" 
                         id="senha_confirm" 
                         name="senha_confirm" 
                         required 
                         minlength="6"
                         maxlength="50"
                     >
-                    <div class="form-text text-muted">Digite a mesma senha novamente</div>
                     <div class="invalid-feedback" id="senhaConfirmErro" style="display: none;">As senhas não coincidem</div>
                 </div>
                 
@@ -91,7 +86,7 @@
                     <div class="col-md-6 mb-3">
                         <label for="especialidade" class="form-label">Especialidade *</label>
                         <select 
-                            class="form-select bg-secondary text-white border-0 {% if erro and 'especialidade' in erro.lower() %}is-invalid{% endif %}" 
+                            class="form-select bg-secondary text-white border-0 {% if erros and 'especialidade' in erros %}is-invalid{% endif %}" 
                             id="especialidade" 
                             name="especialidade" 
                             required
@@ -105,74 +100,53 @@
                             <option value="Psicólogo do Esporte" {% if dados and dados.especialidade == "Psicólogo do Esporte" %}selected{% endif %}>Psicólogo do Esporte</option>
                             <option value="Outro" {% if dados and dados.especialidade == "Outro" %}selected{% endif %}>Outro</option>
                         </select>
-                        {% if erro and 'especialidade' in erro.lower() %}
-                        <div class="invalid-feedback">{{ erro }}</div>
-                        {% endif %}
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="registro_profissional" class="form-label">
-                            Registro Profissional
-                            <small class="text-muted">(opcional)</small>
-                        </label>
+                        <label for="registro_profissional" class="form-label">Registro Profissional (opcional)</label>
                         <input 
                             type="text" 
-                            class="form-control bg-secondary text-white border-0 {% if erro and 'registro' in erro.lower() %}is-invalid{% endif %}" 
+                            class="form-control bg-secondary text-white border-0 {% if erros and 'registro_profissional' in erros %}is-invalid{% endif %}" 
                             id="registro_profissional" 
                             name="registro_profissional" 
                             value="{{ dados.registro_profissional if dados else '' }}"
                             placeholder="Ex: CREF 123456-G/SP"
                         >
-                        {% if erro and 'registro' in erro.lower() %}
-                        <div class="invalid-feedback">{{ erro }}</div>
-                        {% endif %}
                     </div>
                 </div>
                 
                 <!-- CPF/CNPJ -->
                 <div class="mb-3">
-                    <label for="cpf_cnpj" class="form-label">
-                        CPF ou CNPJ *
-                        <small class="text-muted">(para validação)</small>
-                    </label>
+                    <label for="cpf_cnpj" class="form-label">CPF ou CNPJ *</label>
                     <input 
                         type="text" 
-                        class="form-control bg-secondary text-white border-0 {% if erro and ('cpf' in erro.lower() or 'cnpj' in erro.lower()) %}is-invalid{% endif %}" 
+                        class="form-control bg-secondary text-white border-0 {% if erros and ('cpf_cnpj' in erros) %}is-invalid{% endif %}" 
                         id="cpf_cnpj" 
                         name="cpf_cnpj" 
                         value="{{ dados.cpf_cnpj if dados else '' }}"
                         required 
                         placeholder="000.000.000-00 ou 00.000.000/0000-00"
                     >
-                    {% if erro and ('cpf' in erro.lower() or 'cnpj' in erro.lower()) %}
-                    <div class="invalid-feedback">{{ erro }}</div>
-                    {% endif %}
                 </div>
                 
                 <!-- Foto do Registro -->
                 <div class="mb-3">
-                    <label for="foto_registro" class="form-label">
-                        Foto do Registro Profissional *
-                        <small class="text-muted">(diploma, certificado, etc.)</small>
-                    </label>
+                    <label for="foto_registro" class="form-label">Foto do Registro Profissional *</label>
                     <input 
                         type="file" 
-                        class="form-control bg-secondary text-white border-0" 
+                        class="form-control bg-secondary text-white border-0 {% if erros and 'foto_registro' in erros %}is-invalid{% endif %}" 
                         id="foto_registro" 
                         name="foto_registro" 
                         required
                         accept="image/*"
                     >
-                    <div class="form-text text-muted">
-                        Formatos: JPG, PNG. Tamanho máximo: 5MB
-                    </div>
+                    <div class="form-text text-muted">Formatos: JPG, PNG. Tamanho máximo: 5MB</div>
                 </div>
                 
-                <!-- Termos de Uso -->
+                <!-- Termos -->
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" id="aceito_termos" required>
                     <label class="form-check-label" for="aceito_termos">
-                        Declaro que as informações são verdadeiras e aceito os 
-                        <a href="#" class="text-info">Termos de Uso</a> *
+                        Declaro que as informações são verdadeiras e aceito os <a href="#" class="text-info">Termos de Uso</a> *
                     </label>
                 </div>
                 
@@ -203,27 +177,11 @@ document.getElementById('cpf_cnpj').addEventListener('input', function(e) {
         valor = valor.replace(/\.(\d{3})(\d)/, '.$1/$2');
         valor = valor.replace(/(\d{4})(\d)/, '$1-$2');
     }
-    
     e.target.value = valor;
 });
 
-// Validar arquivo antes do envio
+// Validação do formulário
 document.getElementById('form-cadastro').addEventListener('submit', function(e) {
-    const arquivo = document.getElementById('foto_registro').files[0];
-    
-    if (arquivo) {
-        if (arquivo.size > 5 * 1024 * 1024) {
-            e.preventDefault();
-            alert('Arquivo muito grande. Tamanho máximo: 5MB');
-            return;
-        }
-        if (!arquivo.type.startsWith('image/')) {
-            e.preventDefault();
-            alert('Apenas imagens são permitidas');
-            return;
-        }
-    }
-
     // Validar senhas
     const senha = document.getElementById('senha').value;
     const senhaConfirm = document.getElementById('senha_confirm').value;
@@ -236,6 +194,21 @@ document.getElementById('form-cadastro').addEventListener('submit', function(e) 
     } else {
         document.getElementById('senhaConfirmErro').style.display = 'none';
         document.getElementById('senha_confirm').classList.remove('is-invalid');
+    }
+
+    // Validar arquivo
+    const arquivo = document.getElementById('foto_registro').files[0];
+    if (arquivo) {
+        if (arquivo.size > 5 * 1024 * 1024) {
+            e.preventDefault();
+            alert('Arquivo muito grande. Tamanho máximo: 5MB');
+            return;
+        }
+        if (!arquivo.type.startsWith('image/')) {
+            e.preventDefault();
+            alert('Apenas imagens são permitidas');
+            return;
+        }
     }
 
     // Desabilitar botão

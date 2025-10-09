@@ -333,36 +333,34 @@ async def cadastro_cliente_get(request: Request):
     return templates.TemplateResponse("inicio/cadastro_cliente.html", {"request": request})
 
 @app.post("/cadastro_cliente")
-async def cadastro_cliente_post(request: Request, nome: str = Form(...), email: str = Form(...), senha: str = Form(...)):
-    try:
-        # Validação com DTO
-        dto = cadastro_cliente_dto.CadastroClienteDTO(nome=nome, email=email, senha=senha)
+async def cadastro_cliente_post(request: Request, nome: str = Form(...), email: str = Form(...), senha: str = Form(...), senha_confirm: str = Form(...)):
+    data = {
+        "nome": nome,
+        "email": email,
+        "senha": senha,
+        "senha_confirm": senha_confirm
+    }
 
-        if usuario_repo.obter_por_email(dto.email):
-            return templates.TemplateResponse(
-                "inicio/cadastro_cliente.html",
-                {"request": request, "erro": "Email já cadastrado", "form_data": dto.model_dump()}
-            )
-
-        hash_senha = criar_hash_senha(dto.senha)
-        usuario = Usuario(id=0, nome=dto.nome, email=dto.email, senha=hash_senha, perfil="cliente")
-        usuario_id = usuario_repo.inserir(usuario)
-        cliente_repo.inserir(Cliente(usuario_id=usuario_id))
-
-        return RedirectResponse("/login_cliente", status_code=303)
-
-    except ValidationError as e:
-        # Captura erros do Pydantic e mostra no template
-        msg = e.errors()[0]['msg']
+    dto, erros = cadastro_cliente_dto.validar_cadastro_cliente(data)
+    if erros:
         return templates.TemplateResponse(
             "inicio/cadastro_cliente.html",
-            {"request": request, "erro": msg, "form_data": {"nome": nome, "email": email}}
+            {"request": request, "erros": erros, "dados": data}
         )
-    except Exception as e:
+
+    if usuario_repo.obter_por_email(dto.email):
+        erros = {"email": "Email já cadastrado"}
         return templates.TemplateResponse(
             "inicio/cadastro_cliente.html",
-            {"request": request, "erro": f"Erro interno: {str(e)}", "form_data": {"nome": nome, "email": email}}
+            {"request": request, "erros": erros, "dados": data}
         )
+
+    hash_senha = criar_hash_senha(dto.senha)
+    usuario = Usuario(id=0, nome=dto.nome, email=dto.email, senha=hash_senha, perfil="cliente")
+    usuario_id = usuario_repo.inserir(usuario)
+    cliente_repo.inserir(Cliente(usuario_id=usuario_id))
+
+    return RedirectResponse("/login_cliente", status_code=303)
 
 @app.get("/cadastro_profissional")
 async def cadastro_profissional_get(request: Request):
@@ -378,6 +376,7 @@ async def cadastro_profissional_post(
     nome: str = Form(...),
     email: str = Form(...),
     senha: str = Form(...),
+    senha_confirm: str = Form(...),
     especialidade: str = Form(...),
     registro_profissional: Optional[str] = Form(None),
     cpf_cnpj: str = Form(...),
@@ -391,35 +390,46 @@ async def cadastro_profissional_post(
         "registro_profissional": registro_profissional,
         "cpf_cnpj": cpf_cnpj
     }
-    
+
     try:
         # Validação com DTO
-        dto = CadastroProfissionalDTO(
-            nome=nome,
-            email=email,
-            senha=senha,
-            especialidade=especialidade,
-            registro_profissional=registro_profissional,
-            cpf_cnpj=cpf_cnpj
-        )
-        
-        # Validação de email existente
+        data = {
+            "nome": nome,
+            "email": email,
+            "senha": senha,
+            "senha_confirm": senha_confirm,
+            "especialidade": especialidade,
+            "registro_profissional": registro_profissional,
+            "cpf_cnpj": cpf_cnpj,
+            "foto_registro": foto_registro
+        }
+
+        dto, erros = validar_cadastro_profissional(data)
+        if erros:
+            return templates.TemplateResponse(
+                "inicio/cadastro_profissional.html",
+                {"request": request, "erros": erros, "dados": dados_formulario}
+            )
+
+        # Email já cadastrado
         if usuario_repo.obter_por_email(dto.email):
+            erros = {"email": "Email já cadastrado"}
             return templates.TemplateResponse(
                 "inicio/cadastro_profissional.html",
-                {"request": request, "erro": "Email já cadastrado", "dados": dados_formulario}
+                {"request": request, "erros": erros, "dados": dados_formulario}
             )
-        
-        # Validar CPF/CNPJ com função auxiliar
+
+        # Validar CPF/CNPJ
         if not validar_cpf_cnpj(dto.cpf_cnpj):
+            erros = {"cpf_cnpj": "CPF/CNPJ inválido"}
             return templates.TemplateResponse(
                 "inicio/cadastro_profissional.html",
-                {"request": request, "erro": "CPF/CNPJ inválido", "dados": dados_formulario}
+                {"request": request, "erros": erros, "dados": dados_formulario}
             )
-        
-        # Salvar foto
+
+        # Salvar foto do registro
         path_foto = await salvar_foto_registro(foto_registro)
-        
+
         # Criar usuário
         hash_senha = criar_hash_senha(dto.senha)
         usuario = Usuario(
@@ -430,7 +440,7 @@ async def cadastro_profissional_post(
             perfil="profissional"
         )
         usuario_id = usuario_repo.inserir(usuario)
-        
+
         # Criar profissional
         profissional = Profissional(
             id=usuario_id,
@@ -441,10 +451,24 @@ async def cadastro_profissional_post(
             cpf_cnpj=dto.cpf_cnpj,
             foto_registro=path_foto
         )
-        
         profissional_repo.inserir(profissional)
-        
+
         return RedirectResponse("/login_profissional", status_code=303)
+
+    except ValidationError as e:
+        erros = {err['loc'][0]: err['msg'] for err in e.errors()}
+        return templates.TemplateResponse(
+            "inicio/cadastro_profissional.html",
+            {"request": request, "erros": erros, "dados": dados_formulario}
+        )
+
+    except Exception as e:
+        print(f"[ERRO] Cadastro profissional: {str(e)}")
+        return templates.TemplateResponse(
+            "inicio/cadastro_profissional.html",
+            {"request": request, "erro": f"Erro interno: {str(e)}", "dados": dados_formulario}
+        )
+
         
     except ValidationError as e:
         # Extrair primeira mensagem de erro do Pydantic

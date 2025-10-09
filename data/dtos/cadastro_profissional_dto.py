@@ -1,92 +1,124 @@
-from pydantic import BaseModel, field_validator, EmailStr
-from typing import Optional
-
+from pydantic import BaseModel, EmailStr, ValidationError, field_validator
+from fastapi import UploadFile
+import re
 
 class CadastroProfissionalDTO(BaseModel):
-    """DTO para cadastro de profissional com validações"""
     nome: str
     email: EmailStr
     senha: str
+    senha_confirm: str
     especialidade: str
-    registro_profissional: Optional[str] = None
+    registro_profissional: str | None = None
     cpf_cnpj: str
-    
+    foto_registro: UploadFile  # Aqui usamos UploadFile
+
     @field_validator('nome')
     @classmethod
-    def validate_nome(cls, nome):
-        if not nome or not nome.strip():
-            raise ValueError('Nome é obrigatório.')
-        if len(nome.strip()) < 3:
+    def validar_nome(cls, nome):
+        nome = nome.strip()
+        if len(nome) < 3:
             raise ValueError('Nome deve ter pelo menos 3 caracteres.')
-        if len(nome.strip()) > 100:
+        if len(nome) > 100:
             raise ValueError('Nome deve ter no máximo 100 caracteres.')
-        return nome.strip()
-    
-    @field_validator('email')
-    @classmethod
-    def validate_email(cls, email):
-        if not email or not email.strip():
-            raise ValueError('Email é obrigatório.')
-        # EmailStr já valida o formato
-        return email.strip().lower()
-    
+        return nome
+
     @field_validator('senha')
     @classmethod
-    def validate_senha(cls, senha):
-        if not senha:
-            raise ValueError('Senha é obrigatória.')
+    def validar_senha(cls, senha):
+        senha = senha.strip()
         if len(senha) < 6:
             raise ValueError('Senha deve ter pelo menos 6 caracteres.')
-        if len(senha) > 50:
-            raise ValueError('Senha deve ter no máximo 50 caracteres.')
+        if ' ' in senha:
+            raise ValueError('Senha não pode conter espaços.')
         return senha
-    
+
+    @field_validator('senha_confirm')
+    @classmethod
+    def validar_senha_confirm(cls, senha_confirm, info):
+        senha = info.data.get('senha')
+        if senha_confirm != senha:
+            raise ValueError('As senhas não coincidem.')
+        return senha_confirm
+
     @field_validator('especialidade')
     @classmethod
-    def validate_especialidade(cls, especialidade):
-        if not especialidade or not especialidade.strip():
-            raise ValueError('Especialidade é obrigatória.')
-        
-        especialidades_validas = [
-            'Personal Trainer',
-            'Nutricionista',
-            'Fisioterapeuta',
-            'Educador Físico',
-            'Médico do Esporte',
-            'Psicólogo do Esporte',
-            'Outro'
+    def validar_especialidade(cls, esp):
+        esp = esp.strip()
+        opcoes = [
+            "Personal Trainer", "Nutricionista", "Fisioterapeuta",
+            "Educador Físico", "Médico do Esporte", "Psicólogo do Esporte", "Outro"
         ]
-        
-        if especialidade not in especialidades_validas:
+        if esp not in opcoes:
             raise ValueError('Especialidade inválida.')
-        
-        return especialidade
-    
-    @field_validator('registro_profissional')
-    @classmethod
-    def validate_registro_profissional(cls, registro):
-        # Campo opcional, mas se preenchido, deve ter no mínimo 3 caracteres
-        if registro and len(registro.strip()) < 3:
-            raise ValueError('Registro profissional deve ter pelo menos 3 caracteres.')
-        if registro and len(registro.strip()) > 50:
-            raise ValueError('Registro profissional deve ter no máximo 50 caracteres.')
-        return registro.strip() if registro else None
-    
+        return esp
+
     @field_validator('cpf_cnpj')
     @classmethod
-    def validate_cpf_cnpj(cls, cpf_cnpj):
-        if not cpf_cnpj or not cpf_cnpj.strip():
-            raise ValueError('CPF/CNPJ é obrigatório.')
-        
-        # Remove caracteres não numéricos
-        apenas_numeros = ''.join(filter(str.isdigit, cpf_cnpj))
-        
-        # Verifica se tem 11 (CPF) ou 14 (CNPJ) dígitos
-        if len(apenas_numeros) not in [11, 14]:
-            raise ValueError('CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos.')
-        
-        # Verifica se não são todos números iguais (ex: 111.111.111-11)
-        if len(set(apenas_numeros)) == 1:
-            raise ValueError('CPF/CNPJ inválido.')
-        
-        return cpf_cnpj.strip()
+    def validar_cpf_cnpj(cls, valor):
+        valor = re.sub(r'\D', '', valor)
+        if len(valor) == 11:
+            if not cls.validar_cpf(valor):
+                raise ValueError('CPF inválido.')
+        elif len(valor) == 14:
+            if not cls.validar_cnpj(valor):
+                raise ValueError('CNPJ inválido.')
+        else:
+            raise ValueError('CPF ou CNPJ inválido.')
+        return valor
+
+    @field_validator('foto_registro')
+    @classmethod
+    def validar_foto(cls, foto: UploadFile):
+        if not foto:
+            raise ValueError('Foto do registro é obrigatória.')
+        if foto.content_type not in ['image/jpeg', 'image/png']:
+            raise ValueError('Apenas arquivos JPG ou PNG são permitidos.')
+        # Limite de 5MB
+        foto.file.seek(0, 2)  # Move para o final
+        tamanho = foto.file.tell()
+        foto.file.seek(0)
+        if tamanho > 5 * 1024 * 1024:
+            raise ValueError('Arquivo muito grande. Máximo 5MB.')
+        return foto
+
+    # Funções auxiliares
+    @staticmethod
+    def validar_cpf(cpf):
+        if len(cpf) != 11 or cpf == cpf[0]*11:
+            return False
+        soma = sum(int(cpf[i])*(10-i) for i in range(9))
+        resto = (soma*10) % 11
+        resto = 0 if resto == 10 else resto
+        if resto != int(cpf[9]):
+            return False
+        soma = sum(int(cpf[i])*(11-i) for i in range(10))
+        resto = (soma*10) % 11
+        resto = 0 if resto == 10 else resto
+        return resto == int(cpf[10])
+
+    @staticmethod
+    def validar_cnpj(cnpj):
+        if len(cnpj) != 14 or cnpj == cnpj[0]*14:
+            return False
+        pesos1 = [5,4,3,2,9,8,7,6,5,4,3,2]
+        soma = sum(int(cnpj[i])*pesos1[i] for i in range(12))
+        resto = soma % 11
+        dv1 = 0 if resto < 2 else 11 - resto
+        pesos2 = [6]+pesos1
+        soma = sum(int(cnpj[i])*pesos2[i] for i in range(13))
+        resto = soma % 11
+        dv2 = 0 if resto < 2 else 11 - resto
+        return dv1 == int(cnpj[12]) and dv2 == int(cnpj[13])
+
+
+# Função utilitária para validar e retornar todos os erros de uma vez
+def validar_cadastro_profissional(data: dict):
+    erros = {}
+    try:
+        dto = CadastroProfissionalDTO(**data)
+        return dto, None
+    except ValidationError as e:
+        for err in e.errors():
+            campo = err['model_path'][0] if 'model_path' in err else err['loc'][0]
+            erros[campo] = err['msg']
+        return None, erros
