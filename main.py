@@ -5,7 +5,7 @@ from typing import Optional
 from data.dtos import cadastro_cliente_dto
 from data.dtos.cadastro_profissional_dto import CadastroProfissionalDTO
 from fastapi import (
-    FastAPI, HTTPException, Request, Form, Depends, status
+    FastAPI, File, HTTPException, Request, Form, Depends, UploadFile, status
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 # Seus imports
 from data.dtos.login_dto import LoginDTO
 from data.repo import plano_repo, usuario_repo, cliente_repo, profissional_repo
+from util.file_upload import salvar_foto_registro
 from util.security import criar_hash_senha, verificar_senha, gerar_senha_aleatoria
 from util.auth_decorator import criar_sessao, obter_usuario_logado, requer_autenticacao
 from data.model.usuario_model import Usuario
@@ -235,79 +236,64 @@ async def pagamento(request: Request, plano_id: Optional[int] = None):
 async def login_get(request: Request):
     return templates.TemplateResponse("inicio/login.html", {"request": request})
 
+# =================== CADASTRO E LOGIN - REFATORADO ===================
+# Substitua as rotas correspondentes no seu main.py
+
+from data.dtos.cadastro_cliente_dto import validar_cadastro_cliente
+from data.dtos.cadastro_profissional_dto import (
+    validar_cadastro_profissional, 
+    validar_foto_registro
+)
+from data.dtos.login_dto import validar_login
+
+# =================== LOGIN CLIENTE ===================
 @app.get("/login_cliente")
 async def login_cliente_get(request: Request):
-    return templates.TemplateResponse("inicio/login_cliente.html", {"request": request})
+    return templates.TemplateResponse("inicio/login_cliente.html", {
+        "request": request
+    })
+
 
 @app.post("/login_cliente")
-async def login_cliente_post(request: Request, email: str = Form(), senha: str = Form()):
-    usuario = usuario_repo.obter_por_email(email)
+async def login_cliente_post(
+    request: Request, 
+    email: str = Form(...), 
+    senha: str = Form(...)
+):
+    """Login de cliente com validação completa"""
     
-    dados_formulario = {
-        "email": email   
-    }
+    # Preservar dados do formulário
+    dados_formulario = {"email": email}
     
-    try:
-        login_dto = LoginDTO(email=email, senha=senha)
-
-        if not usuario or usuario.perfil != "cliente" or not verificar_senha(login_dto.senha, usuario.senha):
-            return templates.TemplateResponse(
-                "inicio/login_cliente.html",
-                {"request": request, "erro": "Email ou senha inválidos"}
-            )
-
-        # Criar sessão
-        usuario_dict = {
-            "id": usuario.id,
-            "nome": usuario.nome,
-            "email": usuario.email,
-            "perfil": usuario.perfil,
-            "foto": usuario.foto
-        }
-        criar_sessao(request, usuario_dict)
-
-        return RedirectResponse("/", status_code=303)
-    except ValidationError as e:
-        # Extrair mensagens de erro do Pydantic
-        erros = []
-        for erro in e.errors():
-            campo = erro['loc'][0] if erro['loc'] else 'campo'
-            mensagem = erro['msg']
-            erros.append(f"{campo.capitalize()}: {mensagem}")
-
-        erro_msg = " | ".join(erros)
-        # logger.warning(f"Erro de validação no cadastro: {erro_msg}")
-
-        # Retornar template com dados preservados e erro
+    # Validar dados com DTO
+    dto, erros = validar_login({"email": email, "senha": senha})
+    
+    if erros:
         return templates.TemplateResponse("inicio/login_cliente.html", {
             "request": request,
-            "erro": erro_msg,
-            "dados": dados_formulario  # Preservar dados digitados
-        })
-
-    except Exception as e:
-        # logger.error(f"Erro ao processar cadastro: {e}")
-
-        return templates.TemplateResponse("inicio/login_cliente.html", {
-            "request": request,
-            "erro": "Erro ao processar cadastro. Tente novamente.",
+            "erros": erros,
             "dados": dados_formulario
         })
-
-@app.get("/login_profissional")
-async def login_profissional_get(request: Request):
-    return templates.TemplateResponse("inicio/login_profissional.html", {"request": request})
-
-@app.post("/login_profissional")
-async def login_profissional_post(request: Request, email: str = Form(), senha: str = Form()):
-    usuario = usuario_repo.obter_por_email(email)
-
-    if not usuario or usuario.perfil != "profissional" or not verificar_senha(senha, usuario.senha):
-        return templates.TemplateResponse(
-            "inicio/login_profissional.html",
-            {"request": request, "erro": "Email ou senha inválidos"}
-        )
-
+    
+    # Buscar usuário
+    usuario = usuario_repo.obter_por_email(dto.email)
+    
+    if not usuario or usuario.perfil != "cliente":
+        return templates.TemplateResponse("inicio/login_cliente.html", {
+            "request": request,
+            "erro": "Email ou senha inválidos.",
+            "dados": dados_formulario
+        })
+    
+    # Verificar senha
+    if not verificar_senha(dto.senha, usuario.senha):
+        return templates.TemplateResponse("inicio/login_cliente.html", {
+            "request": request,
+            "erro": "Email ou senha inválidos.",
+            "dados": dados_formulario
+        })
+    
+    # Criar sessão
     usuario_dict = {
         "id": usuario.id,
         "nome": usuario.nome,
@@ -316,60 +302,154 @@ async def login_profissional_post(request: Request, email: str = Form(), senha: 
         "foto": usuario.foto
     }
     criar_sessao(request, usuario_dict)
-
-    return RedirectResponse("/personal/dashboard", status_code=303)
     
-
-@app.get("/logout")
-async def logout(request: Request):
-    request.session.clear()
     return RedirectResponse("/", status_code=303)
 
 
-# =================== CADASTROS ===================
+# =================== LOGIN PROFISSIONAL ===================
+@app.get("/login_profissional")
+async def login_profissional_get(request: Request):
+    return templates.TemplateResponse("inicio/login_profissional.html", {
+        "request": request
+    })
 
+
+@app.post("/login_profissional")
+async def login_profissional_post(
+    request: Request, 
+    email: str = Form(...), 
+    senha: str = Form(...)
+):
+    """Login de profissional com validação completa"""
+    
+    dados_formulario = {"email": email}
+    
+    # Validar dados
+    dto, erros = validar_login({"email": email, "senha": senha})
+    
+    if erros:
+        return templates.TemplateResponse("inicio/login_profissional.html", {
+            "request": request,
+            "erros": erros,
+            "dados": dados_formulario
+        })
+    
+    # Buscar usuário
+    usuario = usuario_repo.obter_por_email(dto.email)
+    
+    if not usuario or usuario.perfil != "profissional":
+        return templates.TemplateResponse("inicio/login_profissional.html", {
+            "request": request,
+            "erro": "Email ou senha inválidos.",
+            "dados": dados_formulario
+        })
+    
+    # Verificar senha
+    if not verificar_senha(dto.senha, usuario.senha):
+        return templates.TemplateResponse("inicio/login_profissional.html", {
+            "request": request,
+            "erro": "Email ou senha inválidos.",
+            "dados": dados_formulario
+        })
+    
+    # Criar sessão
+    usuario_dict = {
+        "id": usuario.id,
+        "nome": usuario.nome,
+        "email": usuario.email,
+        "perfil": usuario.perfil,
+        "foto": usuario.foto
+    }
+    criar_sessao(request, usuario_dict)
+    
+    return RedirectResponse("/personal/dashboard", status_code=303)
+
+
+# =================== CADASTRO CLIENTE ===================
 @app.get("/cadastro_cliente")
 async def cadastro_cliente_get(request: Request):
-    return templates.TemplateResponse("inicio/cadastro_cliente.html", {"request": request})
+    return templates.TemplateResponse("inicio/cadastro_cliente.html", {
+        "request": request
+    })
+
 
 @app.post("/cadastro_cliente")
-async def cadastro_cliente_post(request: Request, nome: str = Form(...), email: str = Form(...), senha: str = Form(...), senha_confirm: str = Form(...)):
+async def cadastro_cliente_post(
+    request: Request,
+    nome: str = Form(...),
+    email: str = Form(...),
+    senha: str = Form(...),
+    senha_confirm: str = Form(...)
+):
+    """Cadastro de cliente com validação completa de todos os campos"""
+    
+    # Preservar dados do formulário
+    dados_formulario = {
+        "nome": nome,
+        "email": email
+    }
+    
+    # Montar dados para validação
     data = {
         "nome": nome,
         "email": email,
         "senha": senha,
         "senha_confirm": senha_confirm
     }
-
-    dto, erros = cadastro_cliente_dto.validar_cadastro_cliente(data)
+    
+    # Validar com DTO
+    dto, erros = validar_cadastro_cliente(data)
+    
     if erros:
-        return templates.TemplateResponse(
-            "inicio/cadastro_cliente.html",
-            {"request": request, "erros": erros, "dados": data}
-        )
-
+        return templates.TemplateResponse("inicio/cadastro_cliente.html", {
+            "request": request,
+            "erros": erros,
+            "dados": dados_formulario
+        })
+    
+    # Verificar se email já existe
     if usuario_repo.obter_por_email(dto.email):
-        erros = {"email": "Email já cadastrado"}
-        return templates.TemplateResponse(
-            "inicio/cadastro_cliente.html",
-            {"request": request, "erros": erros, "dados": data}
+        return templates.TemplateResponse("inicio/cadastro_cliente.html", {
+            "request": request,
+            "erros": {"email": "Este email já está cadastrado."},
+            "dados": dados_formulario
+        })
+    
+    # Criar usuário
+    try:
+        hash_senha = criar_hash_senha(dto.senha)
+        usuario = Usuario(
+            id=0,
+            nome=dto.nome,
+            email=dto.email,
+            senha=hash_senha,
+            perfil="cliente"
         )
+        usuario_id = usuario_repo.inserir(usuario)
+        
+        # Criar registro de cliente
+        cliente = Cliente(usuario_id=usuario_id)
+        cliente_repo.inserir(cliente)
+        
+        return RedirectResponse("/login_cliente?sucesso=Cadastro realizado com sucesso!", status_code=303)
+        
+    except Exception as e:
+        print(f"[ERRO] Cadastro cliente: {str(e)}")
+        return templates.TemplateResponse("inicio/cadastro_cliente.html", {
+            "request": request,
+            "erro": "Erro ao realizar cadastro. Tente novamente.",
+            "dados": dados_formulario
+        })
 
-    hash_senha = criar_hash_senha(dto.senha)
-    usuario = Usuario(id=0, nome=dto.nome, email=dto.email, senha=hash_senha, perfil="cliente")
-    usuario_id = usuario_repo.inserir(usuario)
-    cliente_repo.inserir(Cliente(usuario_id=usuario_id))
 
-    return RedirectResponse("/login_cliente", status_code=303)
-
+# =================== CADASTRO PROFISSIONAL ===================
 @app.get("/cadastro_profissional")
 async def cadastro_profissional_get(request: Request):
-    return templates.TemplateResponse("inicio/cadastro_profissional.html", {"request": request})
+    return templates.TemplateResponse("inicio/cadastro_profissional.html", {
+        "request": request
+    })
 
-# CADASTRO PROFISSIONAL COM UPLOAD
-from fastapi import UploadFile, File
-from util.file_upload import salvar_foto_registro, validar_cpf_cnpj
-# =================== ROTA DE CADASTRO PROFISSIONAL ===================
+
 @app.post("/cadastro_profissional")
 async def cadastro_profissional_post(
     request: Request,
@@ -382,6 +462,8 @@ async def cadastro_profissional_post(
     cpf_cnpj: str = Form(...),
     foto_registro: UploadFile = File(...)
 ):
+    """Cadastro de profissional com validação completa de todos os campos"""
+    
     # Preservar dados do formulário
     dados_formulario = {
         "nome": nome,
@@ -390,46 +472,50 @@ async def cadastro_profissional_post(
         "registro_profissional": registro_profissional,
         "cpf_cnpj": cpf_cnpj
     }
-
+    
+    # Montar dados para validação (sem foto)
+    data = {
+        "nome": nome,
+        "email": email,
+        "senha": senha,
+        "senha_confirm": senha_confirm,
+        "especialidade": especialidade,
+        "registro_profissional": registro_profissional,
+        "cpf_cnpj": cpf_cnpj
+    }
+    
+    # Validar dados básicos com DTO
+    dto, erros = validar_cadastro_profissional(data)
+    
+    if erros:
+        return templates.TemplateResponse("inicio/cadastro_profissional.html", {
+            "request": request,
+            "erros": erros,
+            "dados": dados_formulario
+        })
+    
+    # Validar foto separadamente
+    foto_valida, erro_foto = validar_foto_registro(foto_registro)
+    if not foto_valida:
+        return templates.TemplateResponse("inicio/cadastro_profissional.html", {
+            "request": request,
+            "erros": {"foto_registro": erro_foto},
+            "dados": dados_formulario
+        })
+    
+    # Verificar se email já existe
+    if usuario_repo.obter_por_email(dto.email):
+        return templates.TemplateResponse("inicio/cadastro_profissional.html", {
+            "request": request,
+            "erros": {"email": "Este email já está cadastrado."},
+            "dados": dados_formulario
+        })
+    
+    # Criar usuário e profissional
     try:
-        # Validação com DTO
-        data = {
-            "nome": nome,
-            "email": email,
-            "senha": senha,
-            "senha_confirm": senha_confirm,
-            "especialidade": especialidade,
-            "registro_profissional": registro_profissional,
-            "cpf_cnpj": cpf_cnpj,
-            "foto_registro": foto_registro
-        }
-
-        dto, erros = validar_cadastro_profissional(data)
-        if erros:
-            return templates.TemplateResponse(
-                "inicio/cadastro_profissional.html",
-                {"request": request, "erros": erros, "dados": dados_formulario}
-            )
-
-        # Email já cadastrado
-        if usuario_repo.obter_por_email(dto.email):
-            erros = {"email": "Email já cadastrado"}
-            return templates.TemplateResponse(
-                "inicio/cadastro_profissional.html",
-                {"request": request, "erros": erros, "dados": dados_formulario}
-            )
-
-        # Validar CPF/CNPJ
-        if not validar_cpf_cnpj(dto.cpf_cnpj):
-            erros = {"cpf_cnpj": "CPF/CNPJ inválido"}
-            return templates.TemplateResponse(
-                "inicio/cadastro_profissional.html",
-                {"request": request, "erros": erros, "dados": dados_formulario}
-            )
-
         # Salvar foto do registro
         path_foto = await salvar_foto_registro(foto_registro)
-
+        
         # Criar usuário
         hash_senha = criar_hash_senha(dto.senha)
         usuario = Usuario(
@@ -440,7 +526,7 @@ async def cadastro_profissional_post(
             perfil="profissional"
         )
         usuario_id = usuario_repo.inserir(usuario)
-
+        
         # Criar profissional
         profissional = Profissional(
             id=usuario_id,
@@ -452,44 +538,87 @@ async def cadastro_profissional_post(
             foto_registro=path_foto
         )
         profissional_repo.inserir(profissional)
-
-        return RedirectResponse("/login_profissional", status_code=303)
-
-    except ValidationError as e:
-        erros = {err['loc'][0]: err['msg'] for err in e.errors()}
-        return templates.TemplateResponse(
-            "inicio/cadastro_profissional.html",
-            {"request": request, "erros": erros, "dados": dados_formulario}
-        )
-
-    except Exception as e:
-        print(f"[ERRO] Cadastro profissional: {str(e)}")
-        return templates.TemplateResponse(
-            "inicio/cadastro_profissional.html",
-            {"request": request, "erro": f"Erro interno: {str(e)}", "dados": dados_formulario}
-        )
-
         
-    except ValidationError as e:
-        # Extrair primeira mensagem de erro do Pydantic
-        msg = e.errors()[0]['msg']
-        return templates.TemplateResponse(
-            "inicio/cadastro_profissional.html",
-            {"request": request, "erro": msg, "dados": dados_formulario}
+        return RedirectResponse(
+            "/login_profissional?sucesso=Cadastro enviado! Aguarde análise da equipe.",
+            status_code=303
         )
-    except HTTPException as e:
-        return templates.TemplateResponse(
-            "inicio/cadastro_profissional.html",
-            {"request": request, "erro": e.detail, "dados": dados_formulario}
-        )
+        
     except Exception as e:
         print(f"[ERRO] Cadastro profissional: {str(e)}")
-        return templates.TemplateResponse(
-            "inicio/cadastro_profissional.html",
-            {"request": request, "erro": f"Erro interno: {str(e)}", "dados": dados_formulario}
-        )
+        return templates.TemplateResponse("inicio/cadastro_profissional.html", {
+            "request": request,
+            "erro": "Erro ao realizar cadastro. Tente novamente.",
+            "dados": dados_formulario
+        })
 
-# Perfil
+
+# =================== LOGIN ADMIN ===================
+@app.get("/login_admin")
+async def login_admin_get(request: Request):
+    return templates.TemplateResponse("admin/login_admin.html", {
+        "request": request
+    })
+
+
+@app.post("/login_admin")
+async def login_admin_post(
+    request: Request,
+    email: str = Form(...),
+    senha: str = Form(...)
+):
+    """Login de admin com validação completa"""
+    
+    dados_formulario = {"email": email}
+    
+    # Validar dados
+    dto, erros = validar_login({"email": email, "senha": senha})
+    
+    if erros:
+        return templates.TemplateResponse("admin/login_admin.html", {
+            "request": request,
+            "erros": erros,
+            "dados": dados_formulario
+        })
+    
+    # Buscar usuário
+    usuario = usuario_repo.obter_por_email(dto.email)
+    
+    if not usuario or usuario.perfil != "admin":
+        return templates.TemplateResponse("admin/login_admin.html", {
+            "request": request,
+            "erro": "Email ou senha inválidos.",
+            "dados": dados_formulario
+        })
+    
+    # Verificar senha
+    if not verificar_senha(dto.senha, usuario.senha):
+        return templates.TemplateResponse("admin/login_admin.html", {
+            "request": request,
+            "erro": "Email ou senha inválidos.",
+            "dados": dados_formulario
+        })
+    
+    # Criar sessão
+    usuario_dict = {
+        "id": usuario.id,
+        "nome": usuario.nome,
+        "email": usuario.email,
+        "perfil": usuario.perfil,
+        "foto": usuario.foto
+    }
+    criar_sessao(request, usuario_dict)
+    
+    return RedirectResponse("/admin", status_code=303)
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/", status_code=303)
+
+
+# =================== CADASTROS ===================
+
 @app.get("/perfil")
 @requer_autenticacao()
 async def perfil(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
@@ -774,30 +903,6 @@ async def admin_planos_excluir(request: Request, plano_id: int, usuario_logado: 
         return RedirectResponse("/admin/planos?erro=Erro interno ao excluir plano", status_code=303)
 
 
-# =================== AUTENTICAÇÃO ADMIN ===================
-@app.get("/login_admin")
-async def login_admin_get(request: Request):
-    return templates.TemplateResponse("admin/login_admin.html", {"request": request})
-
-@app.post("/login_admin")
-async def login_admin_post(request: Request, email: str = Form(...), senha: str = Form(...)):
-    usuario = usuario_repo.obter_por_email(email)
-
-    if not usuario or usuario.perfil != "admin" or not verificar_senha(senha, usuario.senha):
-        return templates.TemplateResponse(
-            "admin/login_admin.html",
-            {"request": request, "erro": "Email ou senha inválidos"}
-        )
-
-    usuario_dict = {
-        "id": usuario.id,
-        "nome": usuario.nome,
-        "email": usuario.email,
-        "perfil": usuario.perfil,
-        "foto": usuario.foto
-    }
-    criar_sessao(request, usuario_dict)
-    return RedirectResponse("/admin", status_code=303)
 
 # ========== RECUPERAÇÃO DE SENHA ATUALIZADA ==========
 @app.get("/recuperar_senha", response_class=HTMLResponse)
