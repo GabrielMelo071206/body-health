@@ -11,18 +11,19 @@
         <small>Crie sua conta e comece a treinar!</small>
       </p>
 
-      <!-- Exibir todos os erros -->
+      <!-- Exibir todos os erros no topo -->
       {% if erros %}
       <div class="alert alert-danger" role="alert">
-        <ul class="mb-0">
+        <strong><i class="bi bi-exclamation-triangle-fill me-2"></i>Corrija os seguintes erros:</strong>
+        <ul class="mb-0 mt-2">
           {% for campo, msg in erros.items() %}
-          <li>{{ campo.capitalize() }}: {{ msg }}</li>
+          <li><strong>{{ campo.capitalize() }}:</strong> {{ msg }}</li>
           {% endfor %}
         </ul>
       </div>
       {% endif %}
 
-      <!-- Erro geral -->
+      <!-- Erro geral (caso exista) -->
       {% if erro %}
       <div class="alert alert-danger" role="alert">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ erro }}
@@ -44,6 +45,11 @@
             maxlength="100"
             placeholder="Digite seu nome completo"
           >
+          {% if erros and 'nome' in erros %}
+          <div class="invalid-feedback d-block">
+            <i class="bi bi-x-circle me-1"></i>{{ erros['nome'] }}
+          </div>
+          {% endif %}
         </div>
 
         <!-- Email -->
@@ -58,6 +64,11 @@
             required
             placeholder="seu@email.com"
           >
+          {% if erros and 'email' in erros %}
+          <div class="invalid-feedback d-block">
+            <i class="bi bi-x-circle me-1"></i>{{ erros['email'] }}
+          </div>
+          {% endif %}
         </div>
 
         <!-- Senha -->
@@ -74,8 +85,13 @@
             placeholder="Mínimo 6 caracteres"
           >
           <div class="form-text text-muted">
-            <small>A senha deve ter entre 6 e 50 caracteres</small>
+            <small>A senha deve ter entre 6 e 50 caracteres (sem espaços)</small>
           </div>
+          {% if erros and 'senha' in erros %}
+          <div class="invalid-feedback d-block">
+            <i class="bi bi-x-circle me-1"></i>{{ erros['senha'] }}
+          </div>
+          {% endif %}
         </div>
 
         <!-- Repetir Senha -->
@@ -91,9 +107,11 @@
             maxlength="50"
             placeholder="Digite novamente sua senha"
           >
-          <div class="invalid-feedback" id="senhaConfirmErro" style="display: none;">
-            As senhas não coincidem
+          {% if erros and 'senha_confirm' in erros %}
+          <div class="invalid-feedback d-block">
+            <i class="bi bi-x-circle me-1"></i>{{ erros['senha_confirm'] }}
           </div>
+          {% endif %}
         </div>
 
         <!-- Termos de Uso -->
@@ -135,52 +153,6 @@
       const btn = document.getElementById('btn-cadastrar');
       btn.disabled = true;
       btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Criando conta...';
-  });
-
-  // Validar se senhas coincidem
-  document.getElementById('form-cadastro').addEventListener('submit', function(e) {
-      const senha = document.getElementById('senha').value;
-      const senhaConfirm = document.getElementById('senha_confirm').value;
-
-      if (senha !== senhaConfirm) {
-          e.preventDefault();
-          const erroDiv = document.getElementById('senhaConfirmErro');
-          erroDiv.style.display = 'block';
-          document.getElementById('senha_confirm').classList.add('is-invalid');
-          return;
-      } else {
-          document.getElementById('senhaConfirmErro').style.display = 'none';
-          document.getElementById('senha_confirm').classList.remove('is-invalid');
-      }
-  });
-
-  // Validação em tempo real do nome
-  document.getElementById('nome').addEventListener('blur', function() {
-      if (this.value.trim().length < 3) {
-          this.classList.add('is-invalid');
-      } else {
-          this.classList.remove('is-invalid');
-      }
-  });
-
-  // Validação em tempo real da senha
-  document.getElementById('senha').addEventListener('input', function() {
-      const senhaValida = this.value.length >= 6 && this.value.length <= 50;
-      if (!senhaValida && this.value.length > 0) {
-          this.classList.add('is-invalid');
-      } else {
-          this.classList.remove('is-invalid');
-      }
-  });
-
-  // Validação em tempo real do email
-  document.getElementById('email').addEventListener('blur', function() {
-      const re = /\S+@\S+\.\S+/;
-      if (!re.test(this.value)) {
-          this.classList.add('is-invalid');
-      } else {
-          this.classList.remove('is-invalid');
-      }
   });
 </script>
 {% endblock %}

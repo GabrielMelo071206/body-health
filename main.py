@@ -372,7 +372,6 @@ async def cadastro_cliente_get(request: Request):
         "request": request
     })
 
-
 @app.post("/cadastro_cliente")
 async def cadastro_cliente_post(
     request: Request,
@@ -397,9 +396,18 @@ async def cadastro_cliente_post(
         "senha_confirm": senha_confirm
     }
     
-    # Validar com DTO
+    # PASSO 1: Validar TODOS os campos primeiro
     dto, erros = validar_cadastro_cliente(data)
     
+    # PASSO 2: Se houver erros de validação, adicionar verificação de email duplicado
+    if not erros:
+        erros = {}
+    
+    # Verificar se email já existe (ADICIONAR ao dicionário de erros existente)
+    if usuario_repo.obter_por_email(email.strip().lower()):
+        erros['email'] = 'Este email já está cadastrado. Faça login ou use outro email.'
+    
+    # Se houver QUALQUER erro (validação OU email duplicado), exibir TODOS
     if erros:
         return templates.TemplateResponse("inicio/cadastro_cliente.html", {
             "request": request,
@@ -407,15 +415,7 @@ async def cadastro_cliente_post(
             "dados": dados_formulario
         })
     
-    # Verificar se email já existe
-    if usuario_repo.obter_por_email(dto.email):
-        return templates.TemplateResponse("inicio/cadastro_cliente.html", {
-            "request": request,
-            "erros": {"email": "Este email já está cadastrado."},
-            "dados": dados_formulario
-        })
-    
-    # Criar usuário
+    # Criar usuário (só chega aqui se NÃO houver erros)
     try:
         hash_senha = criar_hash_senha(dto.senha)
         usuario = Usuario(
@@ -484,9 +484,23 @@ async def cadastro_profissional_post(
         "cpf_cnpj": cpf_cnpj
     }
     
-    # Validar dados básicos com DTO
+    # PASSO 1: Validar TODOS os campos de texto primeiro
     dto, erros = validar_cadastro_profissional(data)
     
+    # Inicializar dicionário de erros se não existir
+    if not erros:
+        erros = {}
+    
+    # PASSO 2: Validar foto (ADICIONAR ao dicionário existente)
+    foto_valida, erro_foto = validar_foto_registro(foto_registro)
+    if not foto_valida:
+        erros['foto_registro'] = erro_foto
+    
+    # PASSO 3: Verificar email duplicado (ADICIONAR ao dicionário existente)
+    if usuario_repo.obter_por_email(email.strip().lower()):
+        erros['email'] = 'Este email já está cadastrado. Faça login ou use outro email.'
+    
+    # Se houver QUALQUER erro, exibir TODOS
     if erros:
         return templates.TemplateResponse("inicio/cadastro_profissional.html", {
             "request": request,
@@ -494,24 +508,7 @@ async def cadastro_profissional_post(
             "dados": dados_formulario
         })
     
-    # Validar foto separadamente
-    foto_valida, erro_foto = validar_foto_registro(foto_registro)
-    if not foto_valida:
-        return templates.TemplateResponse("inicio/cadastro_profissional.html", {
-            "request": request,
-            "erros": {"foto_registro": erro_foto},
-            "dados": dados_formulario
-        })
-    
-    # Verificar se email já existe
-    if usuario_repo.obter_por_email(dto.email):
-        return templates.TemplateResponse("inicio/cadastro_profissional.html", {
-            "request": request,
-            "erros": {"email": "Este email já está cadastrado."},
-            "dados": dados_formulario
-        })
-    
-    # Criar usuário e profissional
+    # Criar usuário e profissional (só chega aqui se NÃO houver erros)
     try:
         # Salvar foto do registro
         path_foto = await salvar_foto_registro(foto_registro)

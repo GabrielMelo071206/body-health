@@ -44,7 +44,8 @@ class CadastroClienteDTO(BaseModel):
 
 def validar_cadastro_cliente(data: dict) -> tuple[CadastroClienteDTO | None, Dict[str, str] | None]:
     """
-    Valida dados do cadastro de cliente e retorna todos os erros de uma vez
+    Valida dados do cadastro de cliente e retorna TODOS os erros de uma vez
+    Valida campo por campo para capturar múltiplos erros simultaneamente
     
     Returns:
         tuple: (dto_validado, dicionário_de_erros)
@@ -53,35 +54,55 @@ def validar_cadastro_cliente(data: dict) -> tuple[CadastroClienteDTO | None, Dic
     """
     erros = {}
     
+    # Validar campo por campo manualmente para capturar TODOS os erros
+    
+    # 1. VALIDAR NOME
+    nome = data.get('nome', '').strip()
+    if not nome:
+        erros['nome'] = 'Nome é obrigatório.'
+    elif len(nome) < 3:
+        erros['nome'] = 'Nome deve ter pelo menos 3 caracteres.'
+    elif len(nome) > 100:
+        erros['nome'] = 'Nome deve ter no máximo 100 caracteres.'
+    
+    # 2. VALIDAR EMAIL
+    email = data.get('email', '').strip().lower()
+    if not email:
+        erros['email'] = 'Email é obrigatório.'
+    elif '@' not in email or '.' not in email:
+        erros['email'] = 'Email inválido. Use o formato: seu@email.com'
+    else:
+        partes = email.split('@')
+        if len(partes) != 2 or not partes[0] or not partes[1] or '.' not in partes[1]:
+            erros['email'] = 'Email inválido. Use o formato: seu@email.com'
+    
+    # 3. VALIDAR SENHA
+    senha = data.get('senha', '')
+    if not senha:
+        erros['senha'] = 'Senha é obrigatória.'
+    elif len(senha) < 6:
+        erros['senha'] = 'Senha deve ter pelo menos 6 caracteres.'
+    elif len(senha) > 50:
+        erros['senha'] = 'Senha deve ter no máximo 50 caracteres.'
+    elif ' ' in senha:
+        erros['senha'] = 'Senha não pode conter espaços.'
+    
+    # 4. VALIDAR CONFIRMAÇÃO DE SENHA
+    senha_confirm = data.get('senha_confirm', '')
+    if not senha_confirm:
+        erros['senha_confirm'] = 'Confirmação de senha é obrigatória.'
+    elif senha and senha_confirm and senha != senha_confirm:
+        erros['senha_confirm'] = 'As senhas não coincidem.'
+    
+    # Se houver erros, retornar
+    if erros:
+        return None, erros
+    
+    # Se não houver erros, criar o DTO (já validado)
     try:
         dto = CadastroClienteDTO(**data)
         return dto, None
     except Exception as e:
-        # Capturar erros do Pydantic
-        if hasattr(e, 'errors'):
-            for erro in e.errors():
-                # Pegar o nome do campo
-                campo = erro['loc'][-1] if erro['loc'] else 'geral'
-                
-                # Pegar a mensagem de erro
-                mensagem = erro['msg']
-                
-                # Se for erro customizado do ValueError, usar a mensagem
-                if 'value_error' in erro['type'] or 'assertion_error' in erro['type']:
-                    if 'ctx' in erro and 'error' in erro['ctx']:
-                        mensagem = str(erro['ctx']['error'])
-                    elif isinstance(erro.get('ctx'), dict) and 'error' in erro['ctx']:
-                        mensagem = str(erro['ctx']['error'])
-                
-                # Formatar mensagens padrão do Pydantic
-                if 'valid email' in mensagem.lower():
-                    mensagem = 'Email inválido. Use o formato: seu@email.com'
-                elif 'field required' in mensagem.lower():
-                    mensagem = f'{campo.capitalize()} é obrigatório.'
-                
-                erros[str(campo)] = mensagem
-        else:
-            # Erro genérico
-            erros['geral'] = str(e)
-        
+        # Fallback: se mesmo assim der erro, capturar
+        erros['geral'] = 'Erro ao processar dados. Verifique os campos.'
         return None, erros
