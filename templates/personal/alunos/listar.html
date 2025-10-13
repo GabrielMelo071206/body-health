@@ -48,16 +48,11 @@
                             {% endif %}
                         </td>
                         <td>
-                        {% if aluno.data_inicio %}
-                            {% if aluno.data_inicio is string %}
-                                {% set parts = aluno.data_inicio.split(' ')[0].split('-') %}
-                                {{ parts[2] }}/{{ parts[1] }}/{{ parts[0] }}
-                            {% else %}
+                            {% if aluno.data_inicio %}
                                 {{ aluno.data_inicio.strftime('%d/%m/%Y') }}
+                            {% else %}
+                                -
                             {% endif %}
-                        {% else %}
-                            -
-                        {% endif %}
                         </td>
                         <td>
                             {% if aluno.status == 'ativo' %}
@@ -78,9 +73,6 @@
                                 </a>
                                 <a href="/personal/treinos/novo?aluno={{ aluno.id }}" class="btn btn-sm btn-outline-success" title="Criar Treino">
                                     <i class="bi bi-clipboard-plus"></i>
-                                </a>
-                                <a href="/personal/avaliacoes/nova?aluno={{ aluno.id }}" class="btn btn-sm btn-outline-info" title="Nova Avaliação">
-                                    <i class="bi bi-clipboard-data"></i>
                                 </a>
                             </div>
                         </td>

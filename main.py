@@ -1126,10 +1126,11 @@ async def admin_usuarios_excluir(request: Request, usuario_id: int, usuario_loga
 @app.get("/personal/dashboard")
 @requer_autenticacao(['profissional'])
 async def personal_dashboard(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
-    # Definimos um contexto base com a request e a session para garantir que o template funcione
+    """Dashboard do Personal Trainer com tratamento completo de erros"""
+    
+    # Contexto base padrão (sempre funciona mesmo com erros)
     contexto_base = {
         "request": request,
-        "session": request.session,  # CORREÇÃO 1: Adicionamos o objeto session ao contexto
         "usuario": usuario_logado,
         "total_alunos": 0,
         "alunos_ativos": 0,
@@ -1141,13 +1142,17 @@ async def personal_dashboard(request: Request, usuario_logado: dict = Depends(ob
     }
     
     try:
-        # Buscar dados do personal
+        # Buscar profissional
         profissional = profissional_repo.obter_por_id(usuario_logado['id'])
-        # NOTE: Esta linha pode falhar se a tabela 'personal' não existir
-        personal = personal_repo.obter_por_profissional(profissional.id) if profissional else None
+        if not profissional:
+            print(f"[AVISO] Profissional não encontrado para usuário {usuario_logado['id']}")
+            return templates.TemplateResponse("personal/dashboard.html", contexto_base)
+        
+        # Buscar personal (pode não existir ainda)
+        personal = personal_repo.obter_por_profissional(profissional.id)
         
         if not personal:
-            # Retorna o template usando o contexto base
+            print(f"[AVISO] Personal não encontrado para profissional {profissional.id}")
             return templates.TemplateResponse("personal/dashboard.html", contexto_base)
         
         # Estatísticas
@@ -1158,88 +1163,125 @@ async def personal_dashboard(request: Request, usuario_logado: dict = Depends(ob
         # Contar treinos
         total_treinos = 0
         for aluno in alunos:
-            treinos = treino_personalizado_repo.obter_por_aluno(aluno.id)
-            total_treinos += len(treinos)
+            try:
+                treinos = treino_personalizado_repo.obter_por_aluno(aluno.id)
+                total_treinos += len(treinos)
+            except Exception as e:
+                print(f"[ERRO] Erro ao contar treinos do aluno {aluno.id}: {e}")
         
         # Contar avaliações
         total_avaliacoes = 0
         for aluno in alunos:
-            avaliacoes = avaliacao_fisica_repo.obter_por_aluno(aluno.id)
-            total_avaliacoes += len(avaliacoes)
+            try:
+                avaliacoes = avaliacao_fisica_repo.obter_por_aluno(aluno.id)
+                total_avaliacoes += len(avaliacoes)
+            except Exception as e:
+                print(f"[ERRO] Erro ao contar avaliações do aluno {aluno.id}: {e}")
         
-        # Atividades recentes e Lembretes (adapte se necessário)
-        atividades = []
-        lembretes = []
-        
-        # Contexto de sucesso (combina dados reais com o contexto base)
+        # Contexto com dados reais
         contexto_sucesso = {
             "request": request,
-            "session": request.session, # CORREÇÃO 1: Adicionamos o objeto session ao contexto
             "usuario": usuario_logado,
             "total_alunos": total_alunos,
             "alunos_ativos": alunos_ativos,
             "total_treinos": total_treinos,
             "total_avaliacoes": total_avaliacoes,
-            "atividades": atividades,
-            "lembretes": lembretes,
-            "avaliacoes_media": personal.avaliacoes_media
+            "atividades": [],
+            "lembretes": [],
+            "avaliacoes_media": personal.avaliacoes_media if hasattr(personal, 'avaliacoes_media') else None
         }
         
         return templates.TemplateResponse("personal/dashboard.html", contexto_sucesso)
         
     except Exception as e:
         print(f"[ERRO] Dashboard Personal: {str(e)}")
-        # Retorna o template usando o contexto base em caso de erro
+        import traceback
+        traceback.print_exc()
         return templates.TemplateResponse("personal/dashboard.html", contexto_base)
 # =================== GESTÃO DE ALUNOS ===================
 @app.get("/personal/alunos")
 @requer_autenticacao(['profissional'])
 async def personal_alunos_listar(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
+    """Lista alunos do personal com validação de propriedade"""
     try:
         # Buscar personal do profissional logado
         profissional = profissional_repo.obter_por_id(usuario_logado['id'])
-        personal = personal_repo.obter_por_profissional(profissional.id) if profissional else None
+        if not profissional:
+            return templates.TemplateResponse("personal/alunos/listar.html", {
+                "request": request,
+                "usuario": usuario_logado,
+                "alunos": [],
+                "erro": "Dados de profissional não encontrados"
+            })
         
+        personal = personal_repo.obter_por_profissional(profissional.id)
         if not personal:
             return templates.TemplateResponse("personal/alunos/listar.html", {
                 "request": request,
                 "usuario": usuario_logado,
-                "alunos": []
+                "alunos": [],
+                "aviso": "Cadastro de Personal não encontrado. Entre em contato com o suporte."
             })
         
-        # Buscar alunos do personal com dados do usuário
+        # Buscar alunos do personal
         alunos_relacionamento = personal_aluno_repo.obter_alunos_por_personal(personal.id)
         
         # Enriquecer com dados do usuário
         alunos = []
         for rel in alunos_relacionamento:
-            cliente = cliente_repo.obter_por_id(rel.aluno_id)
-            if cliente:
+            try:
+                cliente = cliente_repo.obter_por_id(rel.aluno_id)
+                if not cliente:
+                    continue
+                    
                 usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id)
-                if usuario_aluno:
-                    alunos.append({
-                        'id': rel.id,
-                        'aluno_id': rel.aluno_id,
-                        'nome': usuario_aluno.nome,
-                        'email': usuario_aluno.email,
-                        'objetivo': rel.objetivo,
-                        'data_inicio': rel.data_inicio,
-                        'status': rel.status,
-                        'observacoes': rel.observacoes
-                    })
+                if not usuario_aluno:
+                    continue
+                
+                # CORREÇÃO: Converter data_inicio para datetime se vier como string
+                data_inicio_convertida = rel.data_inicio
+                if isinstance(rel.data_inicio, str):
+                    try:
+                        # Tentar formato ISO (YYYY-MM-DD HH:MM:SS ou YYYY-MM-DD)
+                        data_inicio_convertida = datetime.fromisoformat(rel.data_inicio.split('.')[0])
+                    except (ValueError, AttributeError):
+                        try:
+                            # Tentar formato brasileiro (DD/MM/YYYY)
+                            data_inicio_convertida = datetime.strptime(rel.data_inicio, '%d/%m/%Y')
+                        except ValueError:
+                            data_inicio_convertida = None
+                
+                alunos.append({
+                    'id': rel.id,
+                    'aluno_id': rel.aluno_id,
+                    'nome': usuario_aluno.nome,
+                    'email': usuario_aluno.email,
+                    'objetivo': rel.objetivo,
+                    'data_inicio': data_inicio_convertida,  # Agora é datetime ou None
+                    'status': rel.status,
+                    'observacoes': rel.observacoes
+                })
+            except Exception as e:
+                print(f"[ERRO] Erro ao processar aluno {rel.aluno_id}: {e}")
+                continue
         
         return templates.TemplateResponse("personal/alunos/listar.html", {
             "request": request,
             "usuario": usuario_logado,
             "alunos": alunos
         })
+        
     except Exception as e:
         print(f"[ERRO] Listar alunos: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return templates.TemplateResponse("personal/alunos/listar.html", {
             "request": request,
             "usuario": usuario_logado,
-            "alunos": []
+            "alunos": [],
+            "erro": "Erro ao carregar lista de alunos"
         })
+
 
 @app.get("/personal/alunos/novo")
 @requer_autenticacao(['profissional'])
@@ -1263,45 +1305,74 @@ async def personal_alunos_novo_get(request: Request, usuario_logado: dict = Depe
         "aluno": None,
         "clientes_disponiveis": clientes_disponiveis
     })
+    
+
 @app.post("/personal/alunos/salvar")
 @requer_autenticacao(['profissional'])
 async def personal_alunos_salvar(
     request: Request,
     aluno_id: Optional[int] = Form(None),
-    cliente_id: int = Form(...),
+    cliente_id: Optional[int] = Form(None),  # CORREÇÃO: Agora é opcional
     data_inicio: str = Form(...),
     status: str = Form(...),
     objetivo: Optional[str] = Form(None),
     observacoes: Optional[str] = Form(None),
     usuario_logado: dict = Depends(obter_usuario_logado)
 ):
+    """Salvar aluno com validação completa"""
     try:
         # Buscar ou criar personal do profissional
         profissional = profissional_repo.obter_por_id(usuario_logado['id'])
-        personal = personal_repo.obter_por_profissional(profissional.id) if profissional else None
-
+        if not profissional:
+            return RedirectResponse("/personal/alunos?erro=Profissional não encontrado", status_code=303)
+        
+        personal = personal_repo.obter_por_profissional(profissional.id)
+        
         if not personal:
             # Criar novo personal automaticamente
-            personal = Personal(
-                id=0,
-                profissional_id=profissional.id,
-                total_alunos=0
-            )
-            personal_repo.inserir(personal)
-
-        # Converter data
-        data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
-
+            try:
+                personal = Personal(
+                    id=0,
+                    profissional_id=profissional.id,
+                    total_alunos=0
+                )
+                personal_id = personal_repo.inserir(personal)
+                personal.id = personal_id
+            except Exception as e:
+                print(f"[ERRO] Erro ao criar personal: {e}")
+                return RedirectResponse("/personal/alunos?erro=Erro ao criar registro de Personal", status_code=303)
+        
+        # Validar data
+        try:
+            data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
+        except ValueError:
+            return RedirectResponse("/personal/alunos?erro=Data inválida", status_code=303)
+        
         if aluno_id:
-            # Atualizar aluno existente
+            # EDIÇÃO: Atualizar aluno existente (validar propriedade)
             aluno = personal_aluno_repo.obter_por_id(aluno_id)
-            if aluno:
-                aluno.data_inicio = data_inicio_dt
-                aluno.status = status
-                aluno.objetivo = objetivo
-                aluno.observacoes = observacoes
-                personal_aluno_repo.alterar(aluno)
+            if not aluno or aluno.personal_id != personal.id:
+                return RedirectResponse("/personal/alunos?erro=Aluno não encontrado ou acesso negado", status_code=303)
+            
+            aluno.data_inicio = data_inicio_dt
+            aluno.status = status
+            aluno.objetivo = objetivo
+            aluno.observacoes = observacoes
+            personal_aluno_repo.alterar(aluno)
+            
+            return RedirectResponse("/personal/alunos?sucesso=Aluno atualizado com sucesso", status_code=303)
         else:
+            # NOVO: Criar novo relacionamento
+            # Validar que cliente_id foi fornecido
+            if not cliente_id:
+                return RedirectResponse("/personal/alunos?erro=Cliente não selecionado", status_code=303)
+            
+            # Verificar se cliente já é aluno deste personal
+            alunos_existentes = personal_aluno_repo.obter_alunos_por_personal(personal.id)
+            for aluno_ex in alunos_existentes:
+                if aluno_ex.aluno_id == cliente_id:
+                    return RedirectResponse("/personal/alunos?erro=Este cliente já é seu aluno", status_code=303)
+            
             # Criar novo relacionamento
             novo_aluno = PersonalAluno(
                 id=0,
@@ -1313,16 +1384,19 @@ async def personal_alunos_salvar(
                 observacoes=observacoes
             )
             personal_aluno_repo.inserir(novo_aluno)
-
-            # Atualizar contador de alunos do personal
+            
+            # Atualizar contador
             personal.total_alunos += 1
             personal_repo.alterar(personal)
-
-        return RedirectResponse("/personal/alunos?sucesso=Aluno salvo com sucesso", status_code=303)
+            
+            return RedirectResponse("/personal/alunos?sucesso=Aluno adicionado com sucesso", status_code=303)
+            
     except Exception as e:
         print(f"[ERRO] Salvar aluno: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return RedirectResponse("/personal/alunos?erro=Erro ao salvar aluno", status_code=303)
-
+    
 @app.get("/personal/alunos/{aluno_id}")
 @requer_autenticacao(['profissional'])
 async def personal_alunos_detalhes(
@@ -1330,18 +1404,41 @@ async def personal_alunos_detalhes(
     aluno_id: int, 
     usuario_logado: dict = Depends(obter_usuario_logado)
 ):
+    """Detalhes do aluno com validação de propriedade"""
     try:
-        # Buscar relacionamento
+        # Validar se o aluno pertence ao personal logado
+        profissional = profissional_repo.obter_por_id(usuario_logado['id'])
+        if not profissional:
+            return RedirectResponse("/personal/alunos?erro=Acesso negado", status_code=303)
+        
+        personal = personal_repo.obter_por_profissional(profissional.id)
+        if not personal:
+            return RedirectResponse("/personal/alunos?erro=Acesso negado", status_code=303)
+        
+        # Buscar relacionamento e validar propriedade
         aluno_rel = personal_aluno_repo.obter_por_id(aluno_id)
-        if not aluno_rel:
-            return RedirectResponse("/personal/alunos?erro=Aluno não encontrado", status_code=303)
+        if not aluno_rel or aluno_rel.personal_id != personal.id:
+            return RedirectResponse("/personal/alunos?erro=Aluno não encontrado ou acesso negado", status_code=303)
         
         # Buscar dados do cliente/usuário
         cliente = cliente_repo.obter_por_id(aluno_rel.aluno_id)
-        usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id) if cliente else None
+        if not cliente:
+            return RedirectResponse("/personal/alunos?erro=Dados do aluno não encontrados", status_code=303)
         
+        usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id)
         if not usuario_aluno:
             return RedirectResponse("/personal/alunos?erro=Dados do aluno não encontrados", status_code=303)
+        
+        # CORREÇÃO: Converter data_inicio para datetime se vier como string
+        data_inicio_convertida = aluno_rel.data_inicio
+        if isinstance(aluno_rel.data_inicio, str):
+            try:
+                data_inicio_convertida = datetime.fromisoformat(aluno_rel.data_inicio.split('.')[0])
+            except (ValueError, AttributeError):
+                try:
+                    data_inicio_convertida = datetime.strptime(aluno_rel.data_inicio, '%d/%m/%Y')
+                except ValueError:
+                    data_inicio_convertida = None
         
         # Montar objeto aluno
         aluno = {
@@ -1350,20 +1447,34 @@ async def personal_alunos_detalhes(
             'nome': usuario_aluno.nome,
             'email': usuario_aluno.email,
             'objetivo': aluno_rel.objetivo,
-            'data_inicio': aluno_rel.data_inicio,
+            'data_inicio': data_inicio_convertida,  # Agora é datetime ou None
             'status': aluno_rel.status,
             'observacoes': aluno_rel.observacoes
         }
         
         # Buscar treinos ativos
-        treinos_ativos = treino_personalizado_repo.obter_por_aluno(aluno_id)
+        treinos_ativos = []
+        try:
+            treinos_ativos = treino_personalizado_repo.obter_por_aluno(aluno_id)
+        except Exception as e:
+            print(f"[ERRO] Erro ao buscar treinos: {e}")
         
-        # Buscar última avaliação
-        avaliacoes = avaliacao_fisica_repo.obter_por_aluno(aluno_id)
-        ultima_avaliacao = avaliacoes[0].data_avaliacao if avaliacoes else None
+        # Buscar avaliações
+        avaliacoes = []
+        ultima_avaliacao = None
+        try:
+            avaliacoes = avaliacao_fisica_repo.obter_por_aluno(aluno_id)
+            if avaliacoes:
+                ultima_avaliacao = avaliacoes[0].data_avaliacao
+        except Exception as e:
+            print(f"[ERRO] Erro ao buscar avaliações: {e}")
         
         # Buscar progressos
-        progressos = progresso_aluno_repo.obter_por_aluno(aluno_id)
+        progressos = []
+        try:
+            progressos = progresso_aluno_repo.obter_por_aluno(aluno_id)
+        except Exception as e:
+            print(f"[ERRO] Erro ao buscar progressos: {e}")
         
         return templates.TemplateResponse("personal/alunos/detalhes.html", {
             "request": request,
@@ -1374,10 +1485,14 @@ async def personal_alunos_detalhes(
             "avaliacoes": avaliacoes,
             "progressos": progressos
         })
+        
     except Exception as e:
         print(f"[ERRO] Detalhes aluno: {str(e)}")
-        return RedirectResponse("/personal/alunos?erro=Erro ao carregar detalhes", status_code=303)
-    
+        import traceback
+        traceback.print_exc()
+        return RedirectResponse("/personal/alunos?erro=Erro ao carregar detalhes do aluno", status_code=303)
+
+
 @app.get("/personal/alunos/{aluno_id}/editar")
 @requer_autenticacao(['profissional'])
 async def personal_alunos_editar_get(
@@ -1385,20 +1500,45 @@ async def personal_alunos_editar_get(
     aluno_id: int, 
     usuario_logado: dict = Depends(obter_usuario_logado)
 ):
+    """Formulário de edição com validação de propriedade"""
     try:
+        # Validar propriedade
+        profissional = profissional_repo.obter_por_id(usuario_logado['id'])
+        if not profissional:
+            return RedirectResponse("/personal/alunos?erro=Acesso negado", status_code=303)
+        
+        personal = personal_repo.obter_por_profissional(profissional.id)
+        if not personal:
+            return RedirectResponse("/personal/alunos?erro=Acesso negado", status_code=303)
+        
         aluno_rel = personal_aluno_repo.obter_por_id(aluno_id)
-        if not aluno_rel:
+        if not aluno_rel or aluno_rel.personal_id != personal.id:
             return RedirectResponse("/personal/alunos?erro=Aluno não encontrado", status_code=303)
         
+        # Buscar dados do aluno
         cliente = cliente_repo.obter_por_id(aluno_rel.aluno_id)
         usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id) if cliente else None
         
+        if not usuario_aluno:
+            return RedirectResponse("/personal/alunos?erro=Dados do aluno não encontrados", status_code=303)
+        
+        # CORREÇÃO: Converter data_inicio para datetime se vier como string
+        data_inicio_convertida = aluno_rel.data_inicio
+        if isinstance(aluno_rel.data_inicio, str):
+            try:
+                data_inicio_convertida = datetime.fromisoformat(aluno_rel.data_inicio.split('.')[0])
+            except (ValueError, AttributeError):
+                try:
+                    data_inicio_convertida = datetime.strptime(aluno_rel.data_inicio, '%d/%m/%Y')
+                except ValueError:
+                    data_inicio_convertida = None
+        
         aluno = {
             'id': aluno_rel.id,
-            'nome': usuario_aluno.nome if usuario_aluno else '',
-            'email': usuario_aluno.email if usuario_aluno else '',
+            'nome': usuario_aluno.nome,
+            'email': usuario_aluno.email,
             'objetivo': aluno_rel.objetivo,
-            'data_inicio': aluno_rel.data_inicio,
+            'data_inicio': data_inicio_convertida,  # Agora é datetime ou None
             'status': aluno_rel.status,
             'observacoes': aluno_rel.observacoes
         }
@@ -1409,59 +1549,12 @@ async def personal_alunos_editar_get(
             "aluno": aluno,
             "clientes_disponiveis": []  # Não precisa ao editar
         })
+        
     except Exception as e:
-        print(f"[ERRO] Editar aluno: {str(e)}")
+        print(f"[ERRO] Editar aluno GET: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return RedirectResponse("/personal/alunos?erro=Erro ao carregar aluno", status_code=303)
-
-# =================== GESTÃO DE TREINOS ===================
-@app.get("/personal/treinos")
-@requer_autenticacao(['profissional'])
-async def personal_treinos_listar(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
-    try:
-        profissional = profissional_repo.obter_por_id(usuario_logado['id'])
-        personal = personal_repo.obter_por_profissional(profissional.id) if profissional else None
-        
-        if not personal:
-            return templates.TemplateResponse("personal/treinos/listar.html", {
-                "request": request,
-                "usuario": usuario_logado,
-                "treinos": []
-            })
-        
-        # Buscar todos os alunos do personal
-        alunos = personal_aluno_repo.obter_alunos_por_personal(personal.id)
-        
-        # Buscar treinos de cada aluno
-        todos_treinos = []
-        for aluno in alunos:
-            treinos = treino_personalizado_repo.obter_por_aluno(aluno.id)
-            for treino in treinos:
-                # Buscar nome do aluno
-                cliente = cliente_repo.obter_por_id(aluno.aluno_id)
-                usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id) if cliente else None
-                
-                todos_treinos.append({
-                    'id': treino.id,
-                    'nome': treino.nome,
-                    'aluno_nome': usuario_aluno.nome if usuario_aluno else 'N/A',
-                    'objetivo': treino.objetivo,
-                    'nivel_dificuldade': treino.nivel_dificuldade,
-                    'status': treino.status,
-                    'criado_em': treino.criado_em
-                })
-        
-        return templates.TemplateResponse("personal/treinos/listar.html", {
-            "request": request,
-            "usuario": usuario_logado,
-            "treinos": todos_treinos
-        })
-    except Exception as e:
-        print(f"[ERRO] Listar treinos: {str(e)}")
-        return templates.TemplateResponse("personal/treinos/listar.html", {
-            "request": request,
-            "usuario": usuario_logado,
-            "treinos": []
-        })
 
 # =================== GESTÃO COMPLETA DE TREINOS ===================
 # Adicione estas rotas após a rota personal_treinos_listar existente

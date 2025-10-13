@@ -15,6 +15,8 @@
                     <!-- Campo hidden para aluno_id (quando editar) -->
                     {% if aluno %}
                     <input type="hidden" name="aluno_id" value="{{ aluno.id }}">
+                    <!-- CORREÇÃO: Adicionar cliente_id como hidden quando editar -->
+                    <input type="hidden" name="cliente_id" value="{{ aluno.aluno_id if aluno.aluno_id else '' }}">
                     {% endif %}
                     
                     <!-- Seleção de Cliente (apenas ao criar novo) -->
@@ -43,7 +45,7 @@
                         <div class="col-md-6 mb-3">
                             <label for="data_inicio" class="form-label">Data de Início *</label>
                             <input type="date" class="form-control" id="data_inicio" name="data_inicio" 
-                                   value="{% if aluno %}{{ aluno.data_inicio.strftime('%Y-%m-%d') if aluno.data_inicio else '' }}{% endif %}" required>
+                                   value="{% if aluno and aluno.data_inicio %}{{ aluno.data_inicio.strftime('%Y-%m-%d') }}{% endif %}" required>
                         </div>
                         
                         <div class="col-md-6 mb-3">
