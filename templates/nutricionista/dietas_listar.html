@@ -1,0 +1,98 @@
+{% extends "nutricionista/base_nutricionista.html" %}
+
+{% block titulo %}Planos Alimentares{% endblock %}
+{% block subtitulo %}Gerencie os planos alimentares dos seus pacientes{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-egg-fried me-2"></i>Lista de Planos Alimentares
+        </h5>
+        <a href="/nutricionista/dietas/nova" class="btn btn-success">
+            <i class="bi bi-plus-lg me-1"></i> Criar Plano
+        </a>
+    </div>
+    <div class="card-body">
+        {% if dietas %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nome do Plano</th>
+                        <th>Paciente</th>
+                        <th>Objetivo</th>
+                        <th>Tipo</th>
+                        <th>Status</th>
+                        <th>Criado em</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dieta in dietas %}
+                    <tr>
+                        <td><strong>{{ dieta.nome }}</strong></td>
+                        <td>{{ dieta.paciente_nome }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ dieta.objetivo }}</span>
+                        </td>
+                        <td>
+                            {% if dieta.gratuito %}
+                            <span class="badge bg-success">Gratuito</span>
+                            {% else %}
+                            <span class="badge bg-warning">Premium</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if dieta.status == 'ativo' %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ dieta.status|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ dieta.data_inicio.strftime('%d/%m/%Y') if dieta.data_inicio else '-' }}</td>
+                        <td class="text-end">
+                            <div class="btn-group" role="group">
+                                <a href="/nutricionista/dietas/{{ dieta.id }}" class="btn btn-sm btn-outline-primary" title="Ver Detalhes">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/nutricionista/dietas/{{ dieta.id }}/editar" class="btn btn-sm btn-outline-warning" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarExclusao({{ dieta.id }})" title="Excluir">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-egg-fried fs-1 text-muted"></i>
+            <h5 class="mt-3 text-muted">Nenhum plano alimentar cadastrado</h5>
+            <p class="text-muted">Comece criando o primeiro plano para seus pacientes</p>
+            <a href="/nutricionista/dietas/nova" class="btn btn-success mt-2">
+                <i class="bi bi-plus-lg me-1"></i> Criar Primeiro Plano
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmarExclusao(dietaId) {
+    if (confirm('Tem certeza que deseja excluir este plano alimentar? Esta ação não pode ser desfeita.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/nutricionista/dietas/excluir/${dietaId}`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

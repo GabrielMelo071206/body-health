@@ -1,0 +1,238 @@
+{% extends "nutricionista/base_nutricionista.html" %}
+
+{% block titulo %}{{ paciente.nome }}{% endblock %}
+{% block subtitulo %}Detalhes e histórico do paciente{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <div class="avatar bg-success text-white rounded-circle d-flex align-items-center justify-content-center" 
+                             style="width: 80px; height: 80px; font-size: 2rem;">
+                            {{ paciente.nome[0].upper() }}
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h3 class="mb-1">{{ paciente.nome }}</h3>
+                        <p class="text-muted mb-2">
+                            <i class="bi bi-envelope me-1"></i>{{ paciente.email }}
+                        </p>
+                        <div>
+                            {% if paciente.status == 'ativo' %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% elif paciente.status == 'inativo' %}
+                            <span class="badge bg-secondary">Inativo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Cancelado</span>
+                            {% endif %}
+                            
+                            {% if paciente.objetivo %}
+                            <span class="badge bg-info">{{ paciente.objetivo }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <a href="/nutricionista/pacientes/{{ paciente.id }}/editar" class="btn btn-warning">
+                            <i class="bi bi-pencil me-1"></i> Editar
+                        </a>
+                        <a href="/nutricionista/dietas/nova?paciente={{ paciente.id }}" class="btn btn-success">
+                            <i class="bi bi-egg-fried me-1"></i> Novo Plano
+                        </a>
+                        <a href="/nutricionista/avaliacoes/nova?paciente={{ paciente.id }}" class="btn btn-info">
+                            <i class="bi bi-clipboard-data me-1"></i> Nova Avaliação
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stats-card">
+            <h6 class="text-muted mb-1">Data de Início</h6>
+            <h5 class="mb-0">{{ paciente.data_inicio.strftime('%d/%m/%Y') if paciente.data_inicio else '-' }}</h5>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card">
+            <h6 class="text-muted mb-1">Planos Ativos</h6>
+            <h5 class="mb-0">{{ dietas_ativas|length }}</h5>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card">
+            <h6 class="text-muted mb-1">Última Avaliação</h6>
+            <h5 class="mb-0">{{ ultima_avaliacao.strftime('%d/%m/%Y') if ultima_avaliacao else 'Nenhuma' }}</h5>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <ul class="nav nav-tabs" id="pacienteTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="dietas-tab" data-bs-toggle="tab" data-bs-target="#dietas" type="button">
+                    <i class="bi bi-egg-fried me-1"></i> Planos Alimentares
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="avaliacoes-tab" data-bs-toggle="tab" data-bs-target="#avaliacoes" type="button">
+                    <i class="bi bi-clipboard-data me-1"></i> Avaliações
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="consultas-tab" data-bs-toggle="tab" data-bs-target="#consultas" type="button">
+                    <i class="bi bi-calendar-check me-1"></i> Consultas
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content border border-top-0 rounded-bottom bg-white p-3" id="pacienteTabsContent">
+            <div class="tab-pane fade show active" id="dietas" role="tabpanel">
+                {% if dietas_ativas %}
+                <div class="list-group list-group-flush">
+                    {% for dieta in dietas_ativas %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ dieta.nome }}</h6>
+                                <p class="mb-1 text-muted">{{ dieta.descricao[:100] }}...</p>
+                                <small class="text-muted">
+                                    <span class="badge bg-success">{{ dieta.objetivo }}</span>
+                                    {% if dieta.calorias_totais %}
+                                    <span class="badge bg-info">{{ dieta.calorias_totais }} kcal</span>
+                                    {% endif %}
+                                    <span class="badge bg-secondary">Início: {{ dieta.data_inicio.strftime('%d/%m/%Y') }}</span>
+                                </small>
+                            </div>
+                            <div>
+                                <a href="/nutricionista/dietas/{{ dieta.id }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-egg-fried fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">Nenhum plano alimentar cadastrado</p>
+                    <a href="/nutricionista/dietas/nova?paciente={{ paciente.id }}" class="btn btn-success">
+                        <i class="bi bi-plus-lg me-1"></i> Criar Primeiro Plano
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="tab-pane fade" id="avaliacoes" role="tabpanel">
+                {% if avaliacoes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Data</th>
+                                <th>Peso</th>
+                                <th>IMC</th>
+                                <th>% Gordura</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for aval in avaliacoes %}
+                            <tr>
+                                <td>{{ aval.data_avaliacao.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ aval.peso if aval.peso else '-' }} kg</td>
+                                <td>{{ aval.imc|round(1) if aval.imc else '-' }}</td>
+                                <td>{{ aval.percentual_gordura|round(1) if aval.percentual_gordura else '-' }}%</td>
+                                <td>
+                                    <a href="/nutricionista/avaliacoes/{{ aval.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-clipboard-data fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">Nenhuma avaliação nutricional cadastrada</p>
+                    <a href="/nutricionista/avaliacoes/nova?paciente={{ paciente.id }}" class="btn btn-info">
+                        <i class="bi bi-plus-lg me-1"></i> Criar Primeira Avaliação
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="tab-pane fade" id="consultas" role="tabpanel">
+                {% if consultas %}
+                <div class="list-group list-group-flush">
+                    {% for consulta in consultas %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="mb-1">{{ consulta.data.strftime('%d/%m/%Y') }} - {{ consulta.hora }}</h6>
+                                <p class="mb-1">{{ consulta.observacoes if consulta.observacoes else 'Sem observações' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-calendar-x fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">Nenhuma consulta registrada</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Informações
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Objetivo:</dt>
+                    <dd class="col-sm-7">{{ paciente.objetivo if paciente.objetivo else 'Não definido' }}</dd>
+                    
+                    <dt class="col-sm-5">Status:</dt>
+                    <dd class="col-sm-7">
+                        {% if paciente.status == 'ativo' %}
+                        <span class="badge bg-success">Ativo</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ paciente.status|title }}</span>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-5">Início:</dt>
+                    <dd class="col-sm-7">{{ paciente.data_inicio.strftime('%d/%m/%Y') if paciente.data_inicio else '-' }}</dd>
+                </dl>
+                
+                {% if paciente.observacoes %}
+                <hr>
+                <h6 class="text-muted">Observações:</h6>
+                <p class="small mb-0">{{ paciente.observacoes }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="/nutricionista/pacientes" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+</div>
+{% endblock %}
