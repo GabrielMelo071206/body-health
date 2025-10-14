@@ -12,6 +12,7 @@ def criar_tabela() -> bool:
         conn.commit()
         return True
 
+
 def inserir(progresso: ProgressoAluno) -> Optional[int]:
     with get_connection() as conn:
         cursor = conn.cursor()

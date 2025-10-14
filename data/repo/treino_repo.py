@@ -9,6 +9,7 @@ def criar_tabela() -> bool:
         cursor.execute(CRIAR_TABELA_TREINO)
         return cursor.rowcount > 0
 
+
 def inserir(treino: Treino) -> Optional[int]:
     with get_connection() as conn:
         cursor = conn.cursor()

@@ -77,6 +77,7 @@ def obter_por_id(id: int) -> Optional[Personal]:
             )
         return None
 
+
 def obter_todos() -> list[Personal]:
     with get_connection() as conn:
         cursor = conn.cursor()

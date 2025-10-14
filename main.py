@@ -1306,97 +1306,66 @@ async def personal_alunos_novo_get(request: Request, usuario_logado: dict = Depe
         "clientes_disponiveis": clientes_disponiveis
     })
     
-
-@app.post("/personal/alunos/salvar")
+@app.post("/personal/treinos/salvar")
 @requer_autenticacao(['profissional'])
-async def personal_alunos_salvar(
+async def personal_treinos_salvar(
     request: Request,
-    aluno_id: Optional[int] = Form(None),
-    cliente_id: Optional[int] = Form(None),  # CORREÇÃO: Agora é opcional
-    data_inicio: str = Form(...),
-    status: str = Form(...),
-    objetivo: Optional[str] = Form(None),
+    treino_id: Optional[int] = Form(None),
+    aluno_id: int = Form(...),
+    nome: str = Form(...),
+    objetivo: str = Form(...),
+    nivel_dificuldade: str = Form(...),
+    frequencia_semanal: int = Form(...),
+    duracao_semanas: int = Form(...),
+    descricao: Optional[str] = Form(None),
     observacoes: Optional[str] = Form(None),
+    status: str = Form('ativo'),
     usuario_logado: dict = Depends(obter_usuario_logado)
 ):
-    """Salvar aluno com validação completa"""
+    """Salvar treino (criar ou atualizar) - VERSÃO CORRIGIDA"""
     try:
-        # Buscar ou criar personal do profissional
-        profissional = profissional_repo.obter_por_id(usuario_logado['id'])
-        if not profissional:
-            return RedirectResponse("/personal/alunos?erro=Profissional não encontrado", status_code=303)
-        
-        personal = personal_repo.obter_por_profissional(profissional.id)
-        
-        if not personal:
-            # Criar novo personal automaticamente
-            try:
-                personal = Personal(
-                    id=0,
-                    profissional_id=profissional.id,
-                    total_alunos=0
-                )
-                personal_id = personal_repo.inserir(personal)
-                personal.id = personal_id
-            except Exception as e:
-                print(f"[ERRO] Erro ao criar personal: {e}")
-                return RedirectResponse("/personal/alunos?erro=Erro ao criar registro de Personal", status_code=303)
-        
-        # Validar data
-        try:
-            data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
-        except ValueError:
-            return RedirectResponse("/personal/alunos?erro=Data inválida", status_code=303)
-        
-        if aluno_id:
-            # EDIÇÃO: Atualizar aluno existente (validar propriedade)
-            aluno = personal_aluno_repo.obter_por_id(aluno_id)
-            if not aluno or aluno.personal_id != personal.id:
-                return RedirectResponse("/personal/alunos?erro=Aluno não encontrado ou acesso negado", status_code=303)
-            
-            aluno.data_inicio = data_inicio_dt
-            aluno.status = status
-            aluno.objetivo = objetivo
-            aluno.observacoes = observacoes
-            personal_aluno_repo.alterar(aluno)
-            
-            return RedirectResponse("/personal/alunos?sucesso=Aluno atualizado com sucesso", status_code=303)
+        if treino_id:
+            # Atualizar treino existente
+            treino = treino_personalizado_repo.obter_por_id(treino_id)
+            if treino:
+                treino.nome = nome
+                treino.objetivo = objetivo
+                treino.nivel_dificuldade = nivel_dificuldade
+                treino.frequencia_semanal = frequencia_semanal
+                treino.duracao_semanas = duracao_semanas
+                treino.descricao = descricao
+                treino.observacoes = observacoes
+                treino.status = status
+                treino_personalizado_repo.alterar(treino)
+                return RedirectResponse("/personal/treinos?sucesso=Treino atualizado com sucesso", status_code=303)
         else:
-            # NOVO: Criar novo relacionamento
-            # Validar que cliente_id foi fornecido
-            if not cliente_id:
-                return RedirectResponse("/personal/alunos?erro=Cliente não selecionado", status_code=303)
-            
-            # Verificar se cliente já é aluno deste personal
-            alunos_existentes = personal_aluno_repo.obter_alunos_por_personal(personal.id)
-            for aluno_ex in alunos_existentes:
-                if aluno_ex.aluno_id == cliente_id:
-                    return RedirectResponse("/personal/alunos?erro=Este cliente já é seu aluno", status_code=303)
-            
-            # Criar novo relacionamento
-            novo_aluno = PersonalAluno(
+            # Criar novo treino - COM ARGUMENTOS OBRIGATÓRIOS
+            novo_treino = TreinoPersonalizado(
                 id=0,
-                personal_id=personal.id,
-                aluno_id=cliente_id,
-                data_inicio=data_inicio_dt,
-                status=status,
+                personal_aluno_id=aluno_id,  # Campo correto
+                nome=nome,
                 objetivo=objetivo,
-                observacoes=observacoes
+                nivel_dificuldade=nivel_dificuldade
             )
-            personal_aluno_repo.inserir(novo_aluno)
             
-            # Atualizar contador
-            personal.total_alunos += 1
-            personal_repo.alterar(personal)
+            # Setar atributos opcionais
+            novo_treino.frequencia_semanal = frequencia_semanal
+            novo_treino.duracao_semanas = duracao_semanas
+            novo_treino.descricao = descricao
+            novo_treino.observacoes = observacoes
+            novo_treino.status = status
+            novo_treino.criado_em = datetime.now()
             
-            return RedirectResponse("/personal/alunos?sucesso=Aluno adicionado com sucesso", status_code=303)
+            treino_personalizado_repo.inserir(novo_treino)
+            return RedirectResponse("/personal/treinos?sucesso=Treino criado com sucesso", status_code=303)
             
     except Exception as e:
-        print(f"[ERRO] Salvar aluno: {str(e)}")
+        print(f"[ERRO] Salvar treino: {str(e)}")
         import traceback
         traceback.print_exc()
-        return RedirectResponse("/personal/alunos?erro=Erro ao salvar aluno", status_code=303)
-    
+        return RedirectResponse("/personal/treinos?erro=Erro ao salvar treino", status_code=303)
+
+
 @app.get("/personal/alunos/{aluno_id}")
 @requer_autenticacao(['profissional'])
 async def personal_alunos_detalhes(
@@ -1598,7 +1567,7 @@ async def personal_treinos_listar(request: Request, usuario_logado: dict = Depen
                 usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id) if cliente else None
                 aluno_nome = usuario_aluno.nome if usuario_aluno else 'N/A'
                 
-                # Adicionar treinos com informações do aluno
+                # Adicionar treinos com informações do aluno (CAMPOS CORRETOS DO BANCO)
                 for treino in treinos_aluno:
                     todos_treinos.append({
                         'id': treino.id,
@@ -1606,17 +1575,19 @@ async def personal_treinos_listar(request: Request, usuario_logado: dict = Depen
                         'aluno_nome': aluno_nome,
                         'objetivo': treino.objetivo,
                         'nivel_dificuldade': treino.nivel_dificuldade,
-                        'status': treino.status,
-                        'criado_em': treino.criado_em,
-                        'frequencia_semanal': treino.frequencia_semanal,
-                        'duracao_semanas': treino.duracao_semanas
+                        'status': 'ativo',  # Valor fixo (campo não existe no banco)
+                        'criado_em': None,  # Campo não existe no banco
+                        'frequencia_semanal': getattr(treino, 'dias_semana', None),  # Usar dias_semana
+                        'duracao_semanas': treino.duracao_semanas,
+                        'descricao': treino.descricao,
+                        'divisao_treino': getattr(treino, 'divisao_treino', None)
                     })
             except Exception as e:
                 print(f"[ERRO] Erro ao buscar treinos do aluno {rel.id}: {e}")
                 continue
         
-        # Ordenar por data de criação (mais recente primeiro)
-        todos_treinos.sort(key=lambda x: x['criado_em'], reverse=True)
+        # Ordenar por ID (mais recente primeiro, já que não temos data)
+        todos_treinos.sort(key=lambda x: x['id'], reverse=True)
         
         return templates.TemplateResponse("personal/treinos/listar.html", {
             "request": request,
@@ -1634,6 +1605,10 @@ async def personal_treinos_listar(request: Request, usuario_logado: dict = Depen
             "treinos": [],
             "erro": "Erro ao carregar lista de treinos"
         })
+
+
+# =================== SALVAR TREINO - CORRIGIDO ===================
+
 
 @app.get("/personal/treinos/novo")
 @requer_autenticacao(['profissional'])
@@ -1674,7 +1649,7 @@ async def personal_treinos_novo_get(request: Request, usuario_logado: dict = Dep
         print(f"[ERRO] Novo treino GET: {str(e)}")
         return RedirectResponse("/personal/treinos?erro=Erro ao carregar formulário", status_code=303)
 
-
+# =================== SALVAR TREINO - CORRIGIDO ===================
 @app.post("/personal/treinos/salvar")
 @requer_autenticacao(['profissional'])
 async def personal_treinos_salvar(
@@ -1691,7 +1666,7 @@ async def personal_treinos_salvar(
     status: str = Form('ativo'),
     usuario_logado: dict = Depends(obter_usuario_logado)
 ):
-    """Salvar treino (criar ou atualizar)"""
+    """Salvar treino (criar ou atualizar) - CAMPOS CORRETOS DO BANCO"""
     try:
         if treino_id:
             # Atualizar treino existente
@@ -1700,36 +1675,39 @@ async def personal_treinos_salvar(
                 treino.nome = nome
                 treino.objetivo = objetivo
                 treino.nivel_dificuldade = nivel_dificuldade
-                treino.frequencia_semanal = frequencia_semanal
+                treino.dias_semana = frequencia_semanal  # Campo correto
                 treino.duracao_semanas = duracao_semanas
                 treino.descricao = descricao
-                treino.observacoes = observacoes
-                treino.status = status
+                # observacoes e status não existem no banco
                 treino_personalizado_repo.alterar(treino)
                 return RedirectResponse("/personal/treinos?sucesso=Treino atualizado com sucesso", status_code=303)
         else:
-            # Criar novo treino
+            # Criar novo treino - COM CAMPOS CORRETOS
             novo_treino = TreinoPersonalizado(
                 id=0,
-                aluno_id=aluno_id,
+                personal_aluno_id=aluno_id,
                 nome=nome,
                 objetivo=objetivo,
-                nivel_dificuldade=nivel_dificuldade,
-                frequencia_semanal=frequencia_semanal,
-                duracao_semanas=duracao_semanas,
-                descricao=descricao,
-                observacoes=observacoes,
-                status=status,
-                criado_em=datetime.now()
+                nivel_dificuldade=nivel_dificuldade
             )
+            
+            # Setar atributos opcionais (CAMPOS CORRETOS)
+            novo_treino.dias_semana = frequencia_semanal  # Campo correto
+            novo_treino.duracao_semanas = duracao_semanas
+            novo_treino.descricao = descricao
+            novo_treino.divisao_treino = None  # Pode adicionar depois
+            # observacoes, status e criado_em não existem no banco
+        
+            
             treino_personalizado_repo.inserir(novo_treino)
             return RedirectResponse("/personal/treinos?sucesso=Treino criado com sucesso", status_code=303)
             
     except Exception as e:
         print(f"[ERRO] Salvar treino: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return RedirectResponse("/personal/treinos?erro=Erro ao salvar treino", status_code=303)
-
-
+                                
 @app.get("/personal/treinos/{treino_id}")
 @requer_autenticacao(['profissional'])
 async def personal_treinos_detalhes(

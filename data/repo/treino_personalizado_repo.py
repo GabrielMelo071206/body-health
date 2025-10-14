@@ -9,6 +9,7 @@ def criar_tabela() -> bool:
         cursor.execute(CRIAR_TABELA_TREINO_PERSONALIZADO)
         conn.commit()
         return True
+    
 
 def inserir(treino: TreinoPersonalizado) -> Optional[int]:
     with get_connection() as conn:

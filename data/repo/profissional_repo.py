@@ -15,6 +15,7 @@ def criar_tabela() -> bool:
         conn.commit()
         return True
 
+
 # Inserir um novo profissional
 # data/repo/profissional_repo.py - MODIFICAR INSERIR
 def inserir(prof: Profissional) -> Optional[int]:

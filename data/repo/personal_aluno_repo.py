@@ -84,6 +84,7 @@ def obter_todos() -> list[PersonalAluno]:
             ) for row in rows
         ]
 
+
 def obter_alunos_por_personal(personal_id: int) -> list[PersonalAluno]:
     with get_connection() as conn:
         cursor = conn.cursor()

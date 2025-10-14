@@ -10,6 +10,7 @@ def criar_tabela() -> bool:
         conn.commit()
         return True
 
+
 def inserir(avaliacao: AvaliacaoFisica) -> Optional[int]:
     with get_connection() as conn:
         cursor = conn.cursor()
