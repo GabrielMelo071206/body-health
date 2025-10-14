@@ -1559,6 +1559,82 @@ async def personal_alunos_editar_get(
 # =================== GESTÃO COMPLETA DE TREINOS ===================
 # Adicione estas rotas após a rota personal_treinos_listar existente
 
+# =================== GESTÃO DE TREINOS - LISTAGEM ===================
+@app.get("/personal/treinos")
+@requer_autenticacao(['profissional'])
+async def personal_treinos_listar(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
+    """Lista todos os treinos do personal com validação de propriedade"""
+    try:
+        # Buscar profissional e personal
+        profissional = profissional_repo.obter_por_id(usuario_logado['id'])
+        if not profissional:
+            return templates.TemplateResponse("personal/treinos/listar.html", {
+                "request": request,
+                "usuario": usuario_logado,
+                "treinos": [],
+                "erro": "Dados de profissional não encontrados"
+            })
+        
+        personal = personal_repo.obter_por_profissional(profissional.id)
+        if not personal:
+            return templates.TemplateResponse("personal/treinos/listar.html", {
+                "request": request,
+                "usuario": usuario_logado,
+                "treinos": [],
+                "aviso": "Cadastro de Personal não encontrado"
+            })
+        
+        # Buscar todos os alunos do personal
+        alunos_relacionamento = personal_aluno_repo.obter_alunos_por_personal(personal.id)
+        
+        # Buscar treinos de cada aluno
+        todos_treinos = []
+        for rel in alunos_relacionamento:
+            try:
+                treinos_aluno = treino_personalizado_repo.obter_por_aluno(rel.id)
+                
+                # Buscar nome do aluno
+                cliente = cliente_repo.obter_por_id(rel.aluno_id)
+                usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id) if cliente else None
+                aluno_nome = usuario_aluno.nome if usuario_aluno else 'N/A'
+                
+                # Adicionar treinos com informações do aluno
+                for treino in treinos_aluno:
+                    todos_treinos.append({
+                        'id': treino.id,
+                        'nome': treino.nome,
+                        'aluno_nome': aluno_nome,
+                        'objetivo': treino.objetivo,
+                        'nivel_dificuldade': treino.nivel_dificuldade,
+                        'status': treino.status,
+                        'criado_em': treino.criado_em,
+                        'frequencia_semanal': treino.frequencia_semanal,
+                        'duracao_semanas': treino.duracao_semanas
+                    })
+            except Exception as e:
+                print(f"[ERRO] Erro ao buscar treinos do aluno {rel.id}: {e}")
+                continue
+        
+        # Ordenar por data de criação (mais recente primeiro)
+        todos_treinos.sort(key=lambda x: x['criado_em'], reverse=True)
+        
+        return templates.TemplateResponse("personal/treinos/listar.html", {
+            "request": request,
+            "usuario": usuario_logado,
+            "treinos": todos_treinos
+        })
+        
+    except Exception as e:
+        print(f"[ERRO] Listar treinos: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return templates.TemplateResponse("personal/treinos/listar.html", {
+            "request": request,
+            "usuario": usuario_logado,
+            "treinos": [],
+            "erro": "Erro ao carregar lista de treinos"
+        })
+
 @app.get("/personal/treinos/novo")
 @requer_autenticacao(['profissional'])
 async def personal_treinos_novo_get(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):

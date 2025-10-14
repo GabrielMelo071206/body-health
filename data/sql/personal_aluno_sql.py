@@ -53,6 +53,6 @@ SELECT pa.*, u.nome AS aluno_nome, u.email AS aluno_email
 FROM personal_aluno pa
 INNER JOIN cliente c ON pa.aluno_id = c.id
 INNER JOIN usuario u ON c.id = u.id
-WHERE pa.personal_id=? AND pa.status='ativo'
+WHERE pa.personal_id=?
 ORDER BY u.nome
 """
