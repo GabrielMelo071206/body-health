@@ -1,0 +1,236 @@
+{% extends "personal/base_personal.html" %}
+
+{% block titulo %}Detalhes do Progresso{% endblock %}
+{% block subtitulo %}{{ progresso.aluno_nome }} - {{ progresso.data_registro.strftime('%d/%m/%Y') }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Informações do Progresso
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Data do Registro -->
+                    <div class="col-md-6">
+                        <label class="text-muted small">Data do Registro</label>
+                        <p class="mb-0">
+                            <strong>{{ progresso.data_registro.strftime('%d/%m/%Y às %H:%M') }}</strong>
+                        </p>
+                    </div>
+                    
+                    <!-- Aluno -->
+                    <div class="col-md-6">
+                        <label class="text-muted small">Aluno</label>
+                        <p class="mb-0">
+                            <strong>{{ progresso.aluno_nome }}</strong>
+                        </p>
+                    </div>
+                    
+                    <!-- Peso -->
+                    <div class="col-md-6">
+                        <label class="text-muted small">Peso</label>
+                        <p class="mb-0">
+                            {% if progresso.peso %}
+                            <strong class="fs-4">{{ progresso.peso }} kg</strong>
+                            {% else %}
+                            <span class="text-muted">Não informado</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <!-- Humor -->
+                    <div class="col-md-6">
+                        <label class="text-muted small">Humor</label>
+                        <p class="mb-0">
+                            {% if progresso.humor %}
+                            {% if progresso.humor == 'Ótimo' %}
+                            <span class="badge bg-success fs-6">😊 {{ progresso.humor }}</span>
+                            {% elif progresso.humor == 'Bom' %}
+                            <span class="badge bg-info fs-6">🙂 {{ progresso.humor }}</span>
+                            {% elif progresso.humor == 'Regular' %}
+                            <span class="badge bg-warning fs-6">😐 {{ progresso.humor }}</span>
+                            {% else %}
+                            <span class="badge bg-danger fs-6">😔 {{ progresso.humor }}</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">Não informado</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <!-- Nível de Energia -->
+                    <div class="col-md-12">
+                        <label class="text-muted small">Nível de Energia</label>
+                        {% if progresso.energia %}
+                        <div class="d-flex align-items-center mt-2">
+                            <div class="progress flex-grow-1 me-3" style="height: 30px;">
+                                <div class="progress-bar 
+                                    {% if progresso.energia >= 8 %}bg-success
+                                    {% elif progresso.energia >= 6 %}bg-info
+                                    {% elif progresso.energia >= 4 %}bg-warning
+                                    {% else %}bg-danger{% endif %}" 
+                                    role="progressbar" 
+                                    style="width: {{ progresso.energia * 10 }}%"
+                                    aria-valuenow="{{ progresso.energia }}" 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="10">
+                                    <strong>{{ progresso.energia }}/10</strong>
+                                </div>
+                            </div>
+                            <span class="badge 
+                                {% if progresso.energia >= 8 %}bg-success
+                                {% elif progresso.energia >= 6 %}bg-info
+                                {% elif progresso.energia >= 4 %}bg-warning
+                                {% else %}bg-danger{% endif %} fs-6">
+                                {{ progresso.energia }}/10
+                            </span>
+                        </div>
+                        {% else %}
+                        <p class="mb-0 mt-2"><span class="text-muted">Não informado</span></p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Observações -->
+                    {% if progresso.observacoes %}
+                    <div class="col-md-12">
+                        <label class="text-muted small">Observações</label>
+                        <div class="alert alert-info mb-0 mt-2">
+                            <i class="bi bi-info-circle me-2"></i>
+                            {{ progresso.observacoes }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card de Medidas (se houver) -->
+        {% if progresso.medidas %}
+        <div class="card mt-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-rulers me-2"></i>Medidas Corporais
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for medida, valor in progresso.medidas.items() %}
+                    <div class="col-md-4">
+                        <label class="text-muted small">{{ medida }}</label>
+                        <p class="mb-0"><strong>{{ valor }} cm</strong></p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Card de Ações -->
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-gear me-2"></i>Ações
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/personal/progressos/{{ progresso.id }}/editar" class="btn btn-warning">
+                        <i class="bi bi-pencil me-1"></i> Editar Progresso
+                    </a>
+                    
+                    <button type="button" class="btn btn-danger" onclick="confirmarExclusao()">
+                        <i class="bi bi-trash me-1"></i> Excluir Progresso
+                    </button>
+                    
+                    <hr class="my-2">
+                    
+                    <a href="/personal/alunos/{{ progresso.aluno_id }}" class="btn btn-outline-primary">
+                        <i class="bi bi-person me-1"></i> Ver Aluno
+                    </a>
+                    
+                    <a href="/personal/progressos" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Voltar
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card de Resumo do Aluno -->
+        <div class="card mt-3">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-person-circle me-2"></i>Resumo do Aluno
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto" 
+                         style="width: 60px; height: 60px; font-size: 1.5rem;">
+                        {{ progresso.aluno_nome[0].upper() }}
+                    </div>
+                    <h6 class="mt-2 mb-0">{{ progresso.aluno_nome }}</h6>
+                </div>
+                
+                {% if ultimo_progresso %}
+                <hr>
+                <small class="text-muted d-block mb-2">Último progresso anterior:</small>
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="small">Data:</span>
+                    <strong class="small">{{ ultimo_progresso.data_registro.strftime('%d/%m/%Y') }}</strong>
+                </div>
+                {% if ultimo_progresso.peso and progresso.peso %}
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="small">Variação de peso:</span>
+                    {% set variacao = progresso.peso - ultimo_progresso.peso %}
+                    <strong class="small {% if variacao > 0 %}text-danger{% elif variacao < 0 %}text-success{% endif %}">
+                        {% if variacao > 0 %}+{% endif %}{{ "%.1f"|format(variacao) }} kg
+                    </strong>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Card de Estatísticas -->
+        <div class="card mt-3">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>Estatísticas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="small">Total de registros:</span>
+                    <strong>{{ total_registros }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="small">Primeiro registro:</span>
+                    <strong>{{ primeiro_registro.strftime('%d/%m/%Y') if primeiro_registro else '-' }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="small">Dias acompanhando:</span>
+                    <strong>{{ dias_acompanhamento }} dias</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmarExclusao() {
+    if (confirm('Tem certeza que deseja excluir este registro de progresso? Esta ação não pode ser desfeita.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/personal/progressos/excluir/{{ progresso.id }}';
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

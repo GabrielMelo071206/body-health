@@ -1,0 +1,263 @@
+{% extends "personal/base_personal.html" %}
+
+{% block titulo %}{{ 'Editar Progresso' if progresso else 'Registrar Progresso' }}{% endblock %}
+{% block subtitulo %}{{ progresso.aluno_nome if progresso else 'Registre a evolução do seu aluno' }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-clipboard-plus me-2"></i>
+                    {{ 'Editar Registro de Progresso' if progresso else 'Novo Registro de Progresso' }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/personal/progressos/salvar">
+                    {% if progresso %}
+                    <input type="hidden" name="progresso_id" value="{{ progresso.id }}">
+                    {% endif %}
+                    
+                    <div class="row g-3">
+                        <!-- Seleção de Aluno -->
+                        <div class="col-md-12">
+                            <label for="aluno_id" class="form-label">
+                                Aluno <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="aluno_id" name="aluno_id" required 
+                                    {% if progresso %}disabled{% endif %}>
+                                <option value="">Selecione um aluno...</option>
+                                {% for aluno in alunos_disponiveis %}
+                                <option value="{{ aluno.id }}" 
+                                        {% if progresso and progresso.aluno_id == aluno.id %}selected{% endif %}
+                                        {% if request.query_params.get('aluno') and request.query_params.get('aluno') == aluno.id|string %}selected{% endif %}>
+                                    {{ aluno.nome }} ({{ aluno.email }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if progresso %}
+                            <input type="hidden" name="aluno_id" value="{{ progresso.aluno_id }}">
+                            <small class="text-muted">O aluno não pode ser alterado após criação</small>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Data do Registro -->
+                        <div class="col-md-6">
+                            <label for="data_registro" class="form-label">
+                                Data do Registro <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control" id="data_registro" name="data_registro" 
+                                   value="{% if progresso %}{{ progresso.data_registro.strftime('%Y-%m-%d') }}{% else %}{{ data_hoje }}{% endif %}" 
+                                   required>
+                        </div>
+                        
+                        <!-- Peso -->
+                        <div class="col-md-6">
+                            <label for="peso" class="form-label">
+                                Peso (kg)
+                            </label>
+                            <input type="number" step="0.1" min="0" max="300" class="form-control" 
+                                   id="peso" name="peso" 
+                                   value="{{ progresso.peso if progresso else '' }}" 
+                                   placeholder="Ex: 75.5">
+                            <small class="text-muted">Opcional - peso atual do aluno</small>
+                        </div>
+                        
+                        <!-- Humor -->
+                        <div class="col-md-6">
+                            <label for="humor" class="form-label">
+                                Humor / Estado Emocional
+                            </label>
+                            <select class="form-select" id="humor" name="humor">
+                                <option value="">Não informado</option>
+                                <option value="Ótimo" {% if progresso and progresso.humor == 'Ótimo' %}selected{% endif %}>😊 Ótimo</option>
+                                <option value="Bom" {% if progresso and progresso.humor == 'Bom' %}selected{% endif %}>🙂 Bom</option>
+                                <option value="Regular" {% if progresso and progresso.humor == 'Regular' %}selected{% endif %}>😐 Regular</option>
+                                <option value="Ruim" {% if progresso and progresso.humor == 'Ruim' %}selected{% endif %}>😔 Ruim</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Nível de Energia -->
+                        <div class="col-md-6">
+                            <label for="energia" class="form-label">
+                                Nível de Energia (0-10)
+                            </label>
+                            <div class="input-group">
+                                <input type="range" class="form-range" min="0" max="10" step="1" 
+                                       id="energia" name="energia" 
+                                       value="{{ progresso.energia if progresso else 5 }}"
+                                       oninput="document.getElementById('energia_value').textContent = this.value">
+                                <span class="input-group-text" style="width: 50px;">
+                                    <strong id="energia_value">{{ progresso.energia if progresso else 5 }}</strong>
+                                </span>
+                            </div>
+                            <div class="progress mt-2" style="height: 20px;">
+                                <div class="progress-bar" id="energia_bar" role="progressbar" 
+                                     style="width: {{ (progresso.energia * 10) if progresso else 50 }}%"
+                                     aria-valuenow="{{ progresso.energia if progresso else 5 }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="10">
+                                </div>
+                            </div>
+                            <small class="text-muted">0 = Sem energia | 10 = Muito disposto</small>
+                        </div>
+                        
+                        <!-- Observações -->
+                        <div class="col-md-12">
+                            <label for="observacoes" class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="4" 
+                                      placeholder="Como o aluno está se sentindo? Teve alguma dificuldade? Está motivado? Anote aqui...">{{ progresso.observacoes if progresso else '' }}</textarea>
+                            <small class="text-muted">
+                                <i class="bi bi-lightbulb me-1"></i>
+                                Dica: Registre informações sobre motivação, dores, dificuldades, conquistas, etc.
+                            </small>
+                        </div>
+                        
+                        <!-- Divider -->
+                        <div class="col-md-12">
+                            <hr class="my-2">
+                            <h6 class="text-muted">
+                                <i class="bi bi-rulers me-2"></i>Medidas Corporais (opcional)
+                            </h6>
+                            <small class="text-muted d-block mb-3">
+                                Registre as medidas para acompanhar a evolução física
+                            </small>
+                        </div>
+                        
+                        <!-- Medidas Corporais -->
+                        <div class="col-md-4">
+                            <label for="circunferencia_cintura" class="form-label">Cintura (cm)</label>
+                            <input type="number" step="0.1" min="0" class="form-control" 
+                                   id="circunferencia_cintura" name="circunferencia_cintura" 
+                                   value="{{ progresso.circunferencia_cintura if progresso else '' }}" 
+                                   placeholder="Ex: 80.5">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="circunferencia_quadril" class="form-label">Quadril (cm)</label>
+                            <input type="number" step="0.1" min="0" class="form-control" 
+                                   id="circunferencia_quadril" name="circunferencia_quadril" 
+                                   value="{{ progresso.circunferencia_quadril if progresso else '' }}" 
+                                   placeholder="Ex: 95.0">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="circunferencia_braco" class="form-label">Braço (cm)</label>
+                            <input type="number" step="0.1" min="0" class="form-control" 
+                                   id="circunferencia_braco" name="circunferencia_braco" 
+                                   value="{{ progresso.circunferencia_braco if progresso else '' }}" 
+                                   placeholder="Ex: 32.5">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="circunferencia_perna" class="form-label">Perna (cm)</label>
+                            <input type="number" step="0.1" min="0" class="form-control" 
+                                   id="circunferencia_perna" name="circunferencia_perna" 
+                                   value="{{ progresso.circunferencia_perna if progresso else '' }}" 
+                                   placeholder="Ex: 55.0">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="circunferencia_peito" class="form-label">Peito (cm)</label>
+                            <input type="number" step="0.1" min="0" class="form-control" 
+                                   id="circunferencia_peito" name="circunferencia_peito" 
+                                   value="{{ progresso.circunferencia_peito if progresso else '' }}" 
+                                   placeholder="Ex: 95.0">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="circunferencia_abdomem" class="form-label">Abdômen (cm)</label>
+                            <input type="number" step="0.1" min="0" class="form-control" 
+                                   id="circunferencia_abdomem" name="circunferencia_abdomem" 
+                                   value="{{ progresso.circunferencia_abdomem if progresso else '' }}" 
+                                   placeholder="Ex: 85.0">
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="/personal/progressos" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> 
+                            {% if progresso %}Atualizar{% else %}Registrar{% endif %} Progresso
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Card de Ajuda -->
+        <div class="card mt-3 bg-light">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-info-circle text-info me-2"></i>Sobre o Registro de Progressos
+                </h6>
+                <ul class="mb-0 small">
+                    <li><strong>Frequência ideal:</strong> Registre o progresso semanalmente ou quinzenalmente</li>
+                    <li><strong>Peso:</strong> Sempre no mesmo horário, preferencialmente pela manhã em jejum</li>
+                    <li><strong>Medidas:</strong> Use fita métrica e meça sempre nos mesmos pontos</li>
+                    <li><strong>Humor e Energia:</strong> Ajudam a identificar overtraining ou necessidade de ajustes</li>
+                    <li><strong>Observações:</strong> Registre tudo que pode influenciar os resultados (sono, estresse, alimentação, etc.)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Atualizar barra de progresso de energia
+document.getElementById('energia').addEventListener('input', function() {
+    const valor = this.value;
+    const barra = document.getElementById('energia_bar');
+    const percentual = valor * 10;
+    
+    barra.style.width = percentual + '%';
+    barra.setAttribute('aria-valuenow', valor);
+    
+    // Mudar cor conforme o valor
+    barra.className = 'progress-bar';
+    if (valor >= 8) {
+        barra.classList.add('bg-success');
+    } else if (valor >= 6) {
+        barra.classList.add('bg-info');
+    } else if (valor >= 4) {
+        barra.classList.add('bg-warning');
+    } else {
+        barra.classList.add('bg-danger');
+    }
+});
+
+// Trigger inicial
+document.getElementById('energia').dispatchEvent(new Event('input'));
+
+// Validação do formulário
+document.querySelector('form').addEventListener('submit', function(e) {
+    const alunoId = document.getElementById('aluno_id').value;
+    const dataRegistro = document.getElementById('data_registro').value;
+    
+    if (!alunoId) {
+        e.preventDefault();
+        alert('Por favor, selecione um aluno');
+        return false;
+    }
+    
+    if (!dataRegistro) {
+        e.preventDefault();
+        alert('Por favor, informe a data do registro');
+        return false;
+    }
+    
+    // Verificar se a data não é futura
+    const hoje = new Date().toISOString().split('T')[0];
+    if (dataRegistro > hoje) {
+        e.preventDefault();
+        alert('A data do registro não pode ser no futuro');
+        return false;
+    }
+});
+</script>
+{% endblock %}

@@ -41,7 +41,8 @@
                                 <strong>{{ aval.aluno_nome }}</strong>
                             </div>
                         </td>
-                        <td>{{ aval.data_avaliacao.strftime('%d/%m/%Y') }}</td>
+                          <td>{{ aval.data_formatada }}</td>
+
                         <td>
                             {% if aval.peso %}
                             {{ aval.peso }} kg

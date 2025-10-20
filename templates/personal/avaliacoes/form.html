@@ -1,0 +1,205 @@
+{% extends "personal/base_personal.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block subtitulo %}{% if avaliacao %}Editando avaliação{% else %}Criar nova avaliação física{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-clipboard-data me-2"></i>{{ titulo }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ acao }}">
+                    {% if avaliacao %}
+                    <input type="hidden" name="avaliacao_id" value="{{ avaliacao.id }}">
+                    {% endif %}
+                    
+                    <div class="row g-3">
+                        <!-- Seleção de Aluno -->
+                        <div class="col-md-6">
+                            <label for="aluno_id" class="form-label">
+                                <i class="bi bi-person me-1"></i>Aluno <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="aluno_id" name="aluno_id" required 
+                                    {% if avaliacao %}disabled{% endif %}>
+                                <option value="">Selecione um aluno...</option>
+                                {% for aluno in alunos_disponiveis %}
+                                <option value="{{ aluno.id }}" 
+                                        {% if avaliacao and avaliacao.personal_aluno_id == aluno.id %}selected{% endif %}
+                                        {% if aluno_selecionado_id and aluno.id|string == aluno_selecionado_id %}selected{% endif %}>
+                                    {{ aluno.nome }} ({{ aluno.email }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if avaliacao %}
+                            <input type="hidden" name="aluno_id" value="{{ avaliacao.personal_aluno_id }}">
+                            <small class="text-muted">O aluno não pode ser alterado após criação</small>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Data da Avaliação -->
+                        <div class="col-md-6">
+                            <label for="data_avaliacao" class="form-label">
+                                <i class="bi bi-calendar me-1"></i>Data da Avaliação <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control" id="data_avaliacao" name="data_avaliacao" 
+                            value="{% if avaliacao %}{{ avaliacao.data_avaliacao }}{% endif %}" required>
+
+                        </div>
+                        
+                        <!-- Peso -->
+                        <div class="col-md-6">
+                            <label for="peso" class="form-label">
+                                <i class="bi bi-speedometer me-1"></i>Peso (kg)
+                            </label>
+                            <input type="number" step="0.1" min="0" max="300" class="form-control" 
+                                   id="peso" name="peso" 
+                                   value="{% if avaliacao %}{{ avaliacao.peso }}{% endif %}" 
+                                   placeholder="Ex: 75.5">
+                        </div>
+                        
+                        <!-- Altura -->
+                        <div class="col-md-6">
+                            <label for="altura" class="form-label">
+                                <i class="bi bi-arrows-vertical me-1"></i>Altura (m)
+                            </label>
+                            <input type="number" step="0.01" min="0" max="3" class="form-control" 
+                                   id="altura" name="altura" 
+                                   value="{% if avaliacao %}{{ avaliacao.altura }}{% endif %}" 
+                                   placeholder="Ex: 1.75">
+                            <small class="form-text text-muted">O IMC será calculado automaticamente</small>
+                        </div>
+                        
+                        <!-- Percentual de Gordura -->
+                        <div class="col-md-6">
+                            <label for="percentual_gordura" class="form-label">
+                                <i class="bi bi-percent me-1"></i>Percentual de Gordura (%)
+                            </label>
+                            <input type="number" step="0.1" min="0" max="100" class="form-control" 
+                                   id="percentual_gordura" name="percentual_gordura" 
+                                   value="{% if avaliacao %}{{ avaliacao.percentual_gordura }}{% endif %}" 
+                                   placeholder="Ex: 18.5">
+                        </div>
+                        
+                        <!-- Massa Magra -->
+                        <div class="col-md-6">
+                            <label for="massa_magra" class="form-label">
+                                <i class="bi bi-activity me-1"></i>Massa Magra (kg)
+                            </label>
+                            <input type="number" step="0.1" min="0" max="200" class="form-control" 
+                                   id="massa_magra" name="massa_magra" 
+                                   value="{% if avaliacao %}{{ avaliacao.massa_magra }}{% endif %}" 
+                                   placeholder="Ex: 60.5">
+                        </div>
+                        
+                        <!-- Circunferências -->
+                        <div class="col-md-12">
+                            <label for="circunferencias" class="form-label">
+                                <i class="bi bi-rulers me-1"></i>Circunferências (cm)
+                            </label>
+                            <textarea class="form-control" id="circunferencias" name="circunferencias" rows="3" 
+                                      placeholder="Ex: Pescoço: 38, Braço: 35, Cintura: 85, Quadril: 95, Coxa: 55">{% if avaliacao %}{{ avaliacao.circunferencias }}{% endif %}</textarea>
+                            <small class="form-text text-muted">Liste as medidas relevantes</small>
+                        </div>
+                        
+                        <!-- Observações -->
+                        <div class="col-md-12">
+                            <label for="observacoes" class="form-label">
+                                <i class="bi bi-journal-text me-1"></i>Observações
+                            </label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="4" 
+                                      placeholder="Anote observações importantes sobre a avaliação, condições do aluno, etc.">{% if avaliacao %}{{ avaliacao.observacoes }}{% endif %}</textarea>
+                        </div>
+                        
+                        <!-- Próxima Avaliação -->
+                        <div class="col-md-6">
+                            <label for="proxima_avaliacao" class="form-label">
+                                <i class="bi bi-calendar-event me-1"></i>Próxima Avaliação
+                            </label>
+                            <input type="date" class="form-control" id="proxima_avaliacao" name="proxima_avaliacao" 
+                                   value="{% if avaliacao %}{{ avaliacao.proxima_avaliacao }}{% endif %}">
+                            <small class="form-text text-muted">Data prevista para a próxima avaliação</small>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="/personal/avaliacoes" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> 
+                            {% if avaliacao %}Atualizar{% else %}Criar{% endif %} Avaliação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Card de Ajuda -->
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb text-warning me-2"></i>Dicas para Avaliação Física
+                </h6>
+                <ul class="mb-0 small text-muted">
+                    <li>Realize as medições sempre no mesmo horário do dia</li>
+                    <li>Utilize instrumentos calibrados e validados</li>
+                    <li>O IMC é calculado automaticamente quando peso e altura são informados</li>
+                    <li>Registre observações relevantes como hidratação, alimentação prévia, etc.</li>
+                    <li>Programe a próxima avaliação com antecedência</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calcular IMC automaticamente quando peso ou altura mudarem
+document.getElementById('peso').addEventListener('input', calcularIMC);
+document.getElementById('altura').addEventListener('input', calcularIMC);
+
+function calcularIMC() {
+    const peso = parseFloat(document.getElementById('peso').value);
+    const altura = parseFloat(document.getElementById('altura').value);
+    
+    if (peso > 0 && altura > 0) {
+        const imc = peso / (altura * altura);
+        console.log('IMC calculado:', imc.toFixed(2));
+        // O IMC será calculado no backend, mas você pode mostrar uma prévia aqui
+    }
+}
+
+// Validação do formulário
+document.querySelector('form').addEventListener('submit', function(e) {
+    const aluno = document.getElementById('aluno_id').value;
+    const data = document.getElementById('data_avaliacao').value;
+    
+    if (!aluno) {
+        e.preventDefault();
+        alert('Selecione um aluno');
+        return false;
+    }
+    
+    if (!data) {
+        e.preventDefault();
+        alert('Informe a data da avaliação');
+        return false;
+    }
+});
+document.addEventListener("DOMContentLoaded", () => {
+  const inputData = document.getElementById("data_avaliacao");
+  if (!inputData.value) {
+    const hoje = new Date().toISOString().split('T')[0];
+    inputData.value = hoje;
+  }
+});
+</script>
+
+
+{% endblock %}
