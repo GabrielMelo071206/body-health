@@ -17,7 +17,7 @@ from data.model.treino_personalizado_model import TreinoPersonalizado
 from util.file_upload import salvar_foto_registro
 from util.security import criar_hash_senha, verificar_senha, gerar_senha_aleatoria
 from util.auth_decorator import criar_sessao, obter_usuario_logado, requer_autenticacao
-from util.email_service import email_service
+from util.email_service_gmail import email_service_gmail
 from data.dtos.cadastro_cliente_dto import validar_cadastro_cliente
 from data.dtos.cadastro_profissional_dto import validar_cadastro_profissional, validar_foto_registro
 from data.dtos.login_dto import validar_login
@@ -61,21 +61,21 @@ def register_admin_routes(app: FastAPI):
     @requer_autenticacao(['admin'])
     async def test_email_admin(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
         try:
-            if email_service.testar_conexao():
+            if email_service_gmail.testar_conexao():
                 resultado = {
                     "status": "✅ Sucesso",
                     "mensagem": "Conexão SMTP estabelecida com sucesso!",
-                    "servidor": email_service.smtp_server,
-                    "porta": email_service.smtp_port,
-                    "email": email_service.email
+                    "servidor": email_service_gmail.smtp_server,
+                    "porta": email_service_gmail.smtp_port,
+                    "email": email_service_gmail.email
                 }
             else:
                 resultado = {
                     "status": "❌ Erro", 
                     "mensagem": "Falha na conexão SMTP",
-                    "servidor": email_service.smtp_server,
-                    "porta": email_service.smtp_port,
-                    "email": email_service.email
+                    "servidor": email_service_gmail.smtp_server,
+                    "porta": email_service_gmail.smtp_port,
+                    "email": email_service_gmail.email
                 }
             
             return templates.TemplateResponse("admin/test_email.html", {

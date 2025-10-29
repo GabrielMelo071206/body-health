@@ -17,6 +17,7 @@ from data.model.treino_personalizado_model import TreinoPersonalizado
 from util.file_upload import salvar_foto_registro
 from util.security import criar_hash_senha, verificar_senha, gerar_senha_aleatoria
 from util.auth_decorator import criar_sessao, obter_usuario_logado, requer_autenticacao
+from util.email_service_gmail import email_service_gmail
 from util.email_service import email_service
 from data.dtos.cadastro_cliente_dto import validar_cadastro_cliente
 from data.dtos.cadastro_profissional_dto import validar_cadastro_profissional, validar_foto_registro
@@ -76,6 +77,9 @@ def register_auth_routes(app: FastAPI):
             "foto": usuario.foto
         }
         criar_sessao(request, usuario_dict)
+        email_service.enviar_boas_vindas(
+            para_email=usuario.email, 
+            para_nome=usuario.nome)
         return RedirectResponse("/", status_code=303)
 
     @app.get("/login_profissional")
@@ -122,6 +126,7 @@ def register_auth_routes(app: FastAPI):
             "foto": usuario.foto
         }
         criar_sessao(request, usuario_dict)
+        
         return RedirectResponse("/personal/dashboard", status_code=303)
 
     @app.get("/cadastro_cliente")
@@ -344,7 +349,7 @@ def register_auth_routes(app: FastAPI):
             usuario.senha = criar_hash_senha(nova_senha)
             usuario_repo.alterar(usuario)
             
-            sucesso, mensagem = email_service.enviar_recuperacao_senha(
+            sucesso, mensagem = email_service_gmail.enviar_recuperacao_senha(
                 email_usuario=usuario.email,
                 nome=usuario.nome,
                 nova_senha=nova_senha
@@ -371,7 +376,7 @@ def register_auth_routes(app: FastAPI):
     @app.get("/test-email-quick")
     async def test_email_quick():
         try:
-            if email_service.testar_conexao():
+            if email_service_gmail.testar_conexao():
                 return {"status": "✅ Conexão OK", "service": "Body Health Email"}
             else:
                 return {"status": "❌ Conexão FALHOU", "service": "Body Health Email"}

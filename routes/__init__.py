@@ -17,7 +17,7 @@ from data.model.treino_personalizado_model import TreinoPersonalizado
 from util.file_upload import salvar_foto_registro
 from util.security import criar_hash_senha, verificar_senha, gerar_senha_aleatoria
 from util.auth_decorator import criar_sessao, obter_usuario_logado, requer_autenticacao
-from util.email_service import email_service
+from util.email_service_gmail import email_service_gmail
 from data.dtos.cadastro_cliente_dto import validar_cadastro_cliente
 from data.dtos.cadastro_profissional_dto import validar_cadastro_profissional, validar_foto_registro
 from data.dtos.login_dto import validar_login
@@ -97,7 +97,7 @@ def register_public_routes(app: FastAPI):
             )
         
         try:
-            sucesso, resultado = email_service.enviar_mensagem_suporte(
+            sucesso, resultado = email_service_gmail.enviar_mensagem_suporte(
                 nome=nome.strip(),
                 email_usuario=email.strip(),
                 assunto=assunto.strip(),

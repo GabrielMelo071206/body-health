@@ -97,12 +97,12 @@ def testar_email_service():
     print("📧 Testando serviço de email...")
     
     try:
-        from util.email_service import email_service
+        from util.email_service_gmail import email_service_gmail
         
-        if email_service.testar_conexao():
+        if email_service_gmail.testar_conexao():
             print("✅ Serviço de email configurado corretamente!")
-            print(f"📮 Servidor: {email_service.smtp_server}:{email_service.smtp_port}")
-            print(f"📧 Email: {email_service.email}")
+            print(f"📮 Servidor: {email_service_gmail.smtp_server}:{email_service_gmail.smtp_port}")
+            print(f"📧 Email: {email_service_gmail.email}")
             return True
         else:
             print("⚠️ Problema na configuração do email")
