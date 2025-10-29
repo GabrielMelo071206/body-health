@@ -134,28 +134,3 @@ def obter_todos() -> list[TreinoPersonalizado]:
                 atualizado_em=row["atualizado_em"]
             ) for row in rows
         ]
-
-def obter_por_aluno(personal_aluno_id: int) -> list[TreinoPersonalizado]:
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(OBTER_POR_ALUNO, (personal_aluno_id,))
-        rows = cursor.fetchall()
-        return [
-            TreinoPersonalizado(
-                id=row["id"],
-                personal_aluno_id=row["personal_aluno_id"],
-                nome=row["nome"],
-                descricao=row["descricao"],
-                objetivo=row["objetivo"],
-                nivel_dificuldade=row["nivel_dificuldade"],
-                duracao_semanas=row["duracao_semanas"],
-                dias_semana=row["dias_semana"],
-                divisao_treino=row["divisao_treino"],
-                observacoes=row["observacoes"],
-                status=row["status"],
-                data_inicio=row["data_inicio"],
-                data_fim=row["data_fim"],
-                criado_em=row["criado_em"],
-                atualizado_em=row["atualizado_em"]
-            ) for row in rows
-        ]

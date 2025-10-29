@@ -40,7 +40,13 @@
                                 <strong>{{ prog.aluno_nome }}</strong>
                             </div>
                         </td>
-                        <td>{{ prog.data_registro.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if prog.data_registro %}
+                                {{ prog.data_registro[:10] | replace("-", "/") | safe }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if prog.peso %}
                             {{ prog.peso }} kg

@@ -1203,68 +1203,7 @@ def register_personal_routes(app: FastAPI):
                 "usuario": usuario_logado,
                 "progressos": []
             })
-    @app.get("/personal/progressos")
-    @requer_autenticacao(['profissional'])
-    async def personal_progressos_listar(request: Request, usuario_logado: dict = Depends(obter_usuario_logado)):
-        """Lista todos os progressos com tratamento de datas"""
-        try:
-            profissional = profissional_repo.obter_por_id(usuario_logado['id'])
-            personal = personal_repo.obter_por_profissional(profissional.id) if profissional else None
-            
-            if not personal:
-                return templates.TemplateResponse("personal/progressos/listar.html", {
-                    "request": request,
-                    "usuario": usuario_logado,
-                    "progressos": []
-                })
-            
-            # Buscar todos os alunos e seus progressos
-            alunos = personal_aluno_repo.obter_alunos_por_personal(personal.id)
-            todos_progressos = []
-            
-            for aluno in alunos:
-                progressos = progresso_aluno_repo.obter_por_aluno(aluno.id)
-                for progresso in progressos:
-                    cliente = cliente_repo.obter_por_id(aluno.aluno_id)
-                    usuario_aluno = usuario_repo.obter_por_id(cliente.usuario_id) if cliente else None
-                    
-                    # CORREÇÃO: Converter data_registro para datetime se vier como string
-                    data_registro_convertida = progresso.data_registro
-                    if isinstance(progresso.data_registro, str):
-                        try:
-                            data_registro_convertida = datetime.fromisoformat(progresso.data_registro.split('.')[0])
-                        except (ValueError, AttributeError):
-                            try:
-                                data_registro_convertida = datetime.strptime(progresso.data_registro, '%d/%m/%Y')
-                            except ValueError:
-                                data_registro_convertida = datetime.now()
-                    
-                    todos_progressos.append({
-                        'id': progresso.id,
-                        'aluno_nome': usuario_aluno.nome if usuario_aluno else 'N/A',
-                        'data_registro': data_registro_convertida,
-                        'peso': progresso.peso if hasattr(progresso, 'peso') else None,
-                        'humor': progresso.humor if hasattr(progresso, 'humor') else None,
-                        'energia': progresso.energia if hasattr(progresso, 'energia') else None
-                    })
-            
-            # Ordenar por data (mais recente primeiro)
-            todos_progressos.sort(key=lambda x: x['data_registro'], reverse=True)
-            
-            return templates.TemplateResponse("personal/progressos/listar.html", {
-                "request": request,
-                "usuario": usuario_logado,
-                "progressos": todos_progressos
-            })
-        except Exception as e:
-            print(f"[ERRO] Listar progressos: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return templates.TemplateResponse("personal/progressos/listar.html", {
-                "request": request,
-                "usuario": usuario_logado,
-                "progressos": []
-            })
+   
 
     # =================== ROTAS ADICIONAIS DE PROGRESSOS ===================
 
